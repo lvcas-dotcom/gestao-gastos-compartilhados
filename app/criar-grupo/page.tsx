@@ -61,19 +61,42 @@ export default function ConfigurarGrupo() {
     setIsLoading(true)
 
     try {
-      // Salvar configuração do grupo
-      localStorage.setItem("groupConfig", JSON.stringify(formData))
+      // Usar UserManager para criar o grupo
+      const UserManager = (await import('@/lib/userManager')).default
+      const authData = localStorage.getItem('auth')
       
-      // Simular criação
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-      
-      // Redirecionar para dashboard
-      router.push("/dashboard")
+      if (authData) {
+        const user = JSON.parse(authData)
+        const result = UserManager.createGroup(formData.groupName, user.id)
+        
+        if (result.success) {
+          // Atualizar dados locais
+          user.userGroup = result.group?.id
+          localStorage.setItem('auth', JSON.stringify(user))
+          localStorage.setItem('userGroup', result.group?.id || '')
+          localStorage.setItem("groupConfig", JSON.stringify(formData))
+          
+          // Simular criação
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+          
+          // Redirecionar para dashboard
+          router.push("/dashboard")
+        } else {
+          alert(result.message)
+        }
+      }
     } catch (error) {
+      console.error("Erro ao criar grupo:", error)
       alert("Erro ao configurar grupo. Tente novamente.")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSkip = () => {
+    // Pular etapa - ir direto para dashboard
+    // Útil quando o usuário tem um link de convite
+    router.push("/dashboard")
   }
 
   const handleInputChange = (field: string, value: string) => {
@@ -271,15 +294,27 @@ export default function ConfigurarGrupo() {
                 {isLoading ? (
                   <div className="flex items-center gap-2 xs:gap-3">
                     <div className="w-4 h-4 xs:w-5 xs:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm xs:text-base">Configurando...</span>
+                    <span className="text-sm xs:text-base">Criando grupo...</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 xs:gap-3">
-                    <span className="text-sm xs:text-base">Continuar</span>
+                    <span className="text-sm xs:text-base">Criar Grupo</span>
                     <ArrowRight className="h-4 w-4 xs:h-5 xs:w-5" />
                   </div>
                 )}
               </Button>
+
+              {/* Skip Button */}
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleSkip}
+                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 font-medium text-sm xs:text-base"
+                >
+                  Pular etapa (tenho link de convite)
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -291,9 +326,10 @@ export default function ConfigurarGrupo() {
               <Sparkles className="h-2 w-2 xs:h-3 xs:w-3 text-purple-600" />
             </div>
             <div>
-              <h4 className="font-medium text-purple-800 mb-1 text-sm xs:text-base">Como funciona?</h4>
+              <h4 className="font-medium text-purple-800 mb-1 text-sm xs:text-base">Duas opções disponíveis</h4>
               <p className="text-xs xs:text-sm text-purple-700 leading-relaxed">
-                Configure seu grupo uma única vez. Depois, adicione gastos facilmente e acompanhe quem deve o quê para quem de forma automática.
+                <strong>Criar grupo:</strong> Configure seu grupo e convide outros membros.<br/>
+                <strong>Pular etapa:</strong> Use se já tem um link de convite para entrar em um grupo existente.
               </p>
             </div>
           </div>

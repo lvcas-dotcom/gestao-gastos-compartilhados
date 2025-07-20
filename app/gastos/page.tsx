@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Plus, DollarSign, User, Tag, ArrowLeft, CheckCircle, Sparkles, Users, Calculator } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/useAuth"
+import UserManager from "@/lib/userManager"
 
 const categories = [
   { value: "Comida", label: "🍽️ Comida", color: "bg-orange-100 text-orange-700" },
@@ -24,6 +26,7 @@ const categories = [
 
 export default function GastosPage() {
   const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
   const [users, setUsers] = useState<any[]>([])
   const [formData, setFormData] = useState({
     description: "",
@@ -37,16 +40,29 @@ export default function GastosPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    const user1Data = localStorage.getItem("user1")
-    const user2Data = localStorage.getItem("user2")
-
-    if (!user1Data || !user2Data) {
-      router.push("/")
+    if (!authLoading && !user) {
+      router.push("/login")
       return
     }
 
-    setUsers([JSON.parse(user1Data), JSON.parse(user2Data)])
-  }, [router])
+    if (user) {
+      // Carregar membros do grupo se existir
+      if (user.userGroup) {
+        const allUsers = UserManager.getUsers()
+        const members = allUsers.filter(u => u.userGroup === user.userGroup)
+        setUsers(members)
+        
+        // Definir usuário atual como pagador por padrão
+        if (members.length > 0) {
+          setFormData(prev => ({ ...prev, paidBy: user.id }))
+        }
+      } else {
+        // Se não tem grupo, só pode fazer gastos pessoais
+        setUsers([user])
+        setFormData(prev => ({ ...prev, paidBy: user.id, owedBy: user.id }))
+      }
+    }
+  }, [user, authLoading, router])
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
@@ -93,6 +109,11 @@ export default function GastosPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!user) {
+      alert("Usuário não encontrado. Faça login novamente.")
+      return
+    }
+
     if (!validateForm()) {
       return
     }
@@ -118,10 +139,11 @@ export default function GastosPage() {
         date: new Date().toISOString().split("T")[0],
       }
 
-      // Salvar no localStorage
-      const existingExpenses = JSON.parse(localStorage.getItem("expenses") || "[]")
+      // Salvar no localStorage específico do usuário
+      const userExpensesKey = `expenses_${user.id}`
+      const existingExpenses = JSON.parse(localStorage.getItem(userExpensesKey) || "[]")
       const updatedExpenses = [newExpense, ...existingExpenses]
-      localStorage.setItem("expenses", JSON.stringify(updatedExpenses))
+      localStorage.setItem(userExpensesKey, JSON.stringify(updatedExpenses))
 
       router.push("/dashboard")
     } catch (error) {

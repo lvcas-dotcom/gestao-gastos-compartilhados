@@ -66,8 +66,17 @@ export default function CadastroPage() {
     setIsLoading(true)
 
     try {
-      // Simular criação de conta
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Usar UserManager para registrar o usuário
+      const UserManager = (await import('@/lib/userManager')).default
+      const result = UserManager.registerUser(formData.name, formData.email, formData.password)
+
+      if (!result.success) {
+        setErrors({ email: result.message })
+        return
+      }
+
+      // Simular delay para melhor UX
+      await new Promise((resolve) => setTimeout(resolve, 1500))
 
       // Exibir mensagem de sucesso
       setIsSuccess(true)
@@ -77,7 +86,8 @@ export default function CadastroPage() {
         router.push("/login")
       }, 2000)
     } catch (error) {
-      alert("Erro ao criar conta. Tente novamente.")
+      console.error("Erro ao criar conta:", error)
+      setErrors({ email: "Erro interno. Tente novamente." })
     } finally {
       setIsLoading(false)
     }
@@ -100,12 +110,12 @@ export default function CadastroPage() {
         </div>
 
         <div className="relative z-10 text-center px-4">
-          <Card className="border-0 shadow-xl xs:shadow-2xl shadow-green-500/15 bg-white/90 backdrop-blur-xl ring-1 ring-green-100/50 max-w-md mx-auto">
+          <Card className="border-0 shadow-xl xs:shadow-2xl shadow-purple-500/15 bg-white/90 backdrop-blur-xl ring-1 ring-purple-100/50 max-w-md mx-auto">
             <CardContent className="p-6 xs:p-8">
-              <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 xs:mb-6 shadow-lg shadow-green-500/30">
+              <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-purple-500 to-violet-500 rounded-full flex items-center justify-center mx-auto mb-4 xs:mb-6 shadow-lg shadow-purple-500/30">
                 <CheckCircle className="h-8 w-8 xs:h-10 xs:w-10 text-white" />
               </div>
-              <h1 className="text-xl xs:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2 xs:mb-3">
+              <h1 className="text-xl xs:text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent mb-2 xs:mb-3">
                 Conta Criada com Sucesso!
               </h1>
               <p className="text-gray-600 text-sm xs:text-base leading-relaxed mb-4 xs:mb-6">

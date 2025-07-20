@@ -20,6 +20,8 @@ import {
   Calculator,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/useAuth"
+import UserManager from "@/lib/userManager"
 
 const categories = [
   { value: "Comida", label: "🍽️ Comida", color: "bg-orange-100 text-orange-700" },
@@ -34,6 +36,7 @@ const categories = [
 
 export default function HistoricoPage() {
   const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
   const [users, setUsers] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [filteredExpenses, setFilteredExpenses] = useState<any[]>([])
@@ -42,22 +45,30 @@ export default function HistoricoPage() {
   const [userFilter, setUserFilter] = useState("all")
 
   useEffect(() => {
-    const user1Data = localStorage.getItem("user1")
-    const user2Data = localStorage.getItem("user2")
-    const expensesData = localStorage.getItem("expenses")
-
-    if (!user1Data || !user2Data) {
-      router.push("/")
+    if (!authLoading && !user) {
+      router.push("/login")
       return
     }
 
-    const usersArray = [JSON.parse(user1Data), JSON.parse(user2Data)]
-    const expensesArray = JSON.parse(expensesData || "[]")
+    if (user) {
+      // Carregar gastos específicos do usuário
+      const userExpensesKey = `expenses_${user.id}`
+      const expensesData = localStorage.getItem(userExpensesKey)
+      const expensesArray = JSON.parse(expensesData || "[]")
 
-    setUsers(usersArray)
-    setExpenses(expensesArray)
-    setFilteredExpenses(expensesArray)
-  }, [router])
+      // Carregar membros do grupo se existir
+      if (user.userGroup) {
+        const allUsers = UserManager.getUsers()
+        const members = allUsers.filter(u => u.userGroup === user.userGroup)
+        setUsers(members)
+      } else {
+        setUsers([user])
+      }
+
+      setExpenses(expensesArray)
+      setFilteredExpenses(expensesArray)
+    }
+  }, [user, authLoading, router])
 
   useEffect(() => {
     let filtered = expenses

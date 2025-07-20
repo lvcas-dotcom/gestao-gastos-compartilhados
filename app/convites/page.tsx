@@ -70,7 +70,7 @@ export default function ConvitesPage() {
 
     setUsers([JSON.parse(user1Data), JSON.parse(user2Data)])
 
-    // Carregar convites salvos ou criar exemplos
+    // Carregar convites salvos
     const savedInvites = localStorage.getItem("invites")
     if (savedInvites) {
       try {

@@ -16,16 +16,13 @@ import {
   Sparkles,
   Share2,
   LogOut,
+  Settings,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-
-interface User {
-  id: string
-  name: string
-  email: string
-}
+import { useAuth } from "@/hooks/useAuth"
+import UserManager from "@/lib/userManager"
 
 interface Expense {
   id: string
@@ -39,102 +36,97 @@ interface Expense {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [users, setUsers] = useState<User[]>([])
+  const { user, logout, isLoading } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [group, setGroup] = useState<any>(null)
-
-  const handleLogout = () => {
-    // Limpar todos os dados do localStorage se necessário
-    // localStorage.clear() - use apenas se quiser limpar tudo
-    
-    // Ou limpar apenas dados específicos:
-    // localStorage.removeItem("user1")
-    // localStorage.removeItem("user2")
-    // localStorage.removeItem("group")
-    
-    // Redirecionar para a página de login
-    router.push("/")
-  }
+  const [groupMembers, setGroupMembers] = useState<any[]>([])
 
   useEffect(() => {
-    // Verificar se os usuários estão cadastrados
-    const user1Data = localStorage.getItem("user1")
-    const user2Data = localStorage.getItem("user2")
-    const groupData = localStorage.getItem("group")
-    const groupConfig = localStorage.getItem("groupConfig")
+    if (!isLoading && user) {
+      // Carregar dados do grupo se o usuário tem um
+      if (user.userGroup) {
+        const userGroup = UserManager.getUserGroup(user.id)
+        if (userGroup) {
+          setGroup(userGroup)
+          
+          // Carregar membros do grupo
+          const allUsers = UserManager.getUsers()
+          const members = allUsers.filter(u => u.userGroup === user.userGroup)
+          setGroupMembers(members)
+        }
+      }
 
-    if (!user1Data || !user2Data || (!groupData && !groupConfig)) {
-      router.push("/")
-      return
-    }
+      // Carregar configurações do grupo (foto, etc.)
+      const groupConfig = localStorage.getItem("groupConfig")
+      if (groupConfig) {
+        const config = JSON.parse(groupConfig)
+        setGroup((prev: any) => ({
+          ...prev,
+          groupName: config.groupName,
+          numberOfPeople: config.numberOfPeople,
+          groupPhoto: config.groupPhoto,
+        }))
+      }
 
-    setUsers([JSON.parse(user1Data), JSON.parse(user2Data)])
-    
-    // Priorizar groupConfig que tem a foto, senão usar groupData
-    if (groupConfig) {
-      const config = JSON.parse(groupConfig)
-      setGroup({
-        name: config.groupName,
-        numberOfPeople: config.numberOfPeople,
-        photo: config.groupPhoto, // Esta é a foto do grupo
-      })
-    } else if (groupData) {
-      setGroup(JSON.parse(groupData))
+      // Carregar gastos salvos específicos do usuário
+      const userExpensesKey = `expenses_${user.id}`
+      const savedExpenses = localStorage.getItem(userExpensesKey)
+      if (savedExpenses) {
+        setExpenses(JSON.parse(savedExpenses))
+      }
+      // Não carregar dados de exemplo - aplicação limpa para produção
     }
+  }, [user, isLoading])
 
-    // Carregar gastos salvos ou usar dados de exemplo
-    const savedExpenses = localStorage.getItem("expenses")
-    if (savedExpenses) {
-      setExpenses(JSON.parse(savedExpenses))
-    } else {
-      // Dados de exemplo
-      const exampleExpenses = [
-        {
-          id: "1",
-          description: "Almoço no restaurante",
-          amount: 45.5,
-          category: "Comida",
-          paidBy: "1",
-          owedBy: "2",
-          date: new Date().toISOString().split("T")[0],
-        },
-        {
-          id: "2",
-          description: "Uber para casa",
-          amount: 18.3,
-          category: "Transporte",
-          paidBy: "2",
-          owedBy: "1",
-          date: new Date(Date.now() - 86400000).toISOString().split("T")[0],
-        },
-      ]
-      setExpenses(exampleExpenses)
-      localStorage.setItem("expenses", JSON.stringify(exampleExpenses))
+  // Redirect se não estiver autenticado
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login")
     }
-  }, [router])
+  }, [user, isLoading, router])
+
+  const handleLogout = () => {
+    logout()
+  }
 
   const calculateBalance = () => {
-    let user1Balance = 0
-    let user2Balance = 0
+    if (!user || groupMembers.length === 0) {
+      return { userOwed: 0, userOwes: 0, netBalance: 0 }
+    }
+
+    let userOwed = 0  // Quanto outros devem para o usuário atual
+    let userOwes = 0  // Quanto o usuário atual deve para outros
 
     expenses.forEach((expense) => {
-      if (expense.paidBy === "1" && expense.owedBy === "2") {
-        user1Balance += expense.amount
-      } else if (expense.paidBy === "2" && expense.owedBy === "1") {
-        user2Balance += expense.amount
+      if (expense.paidBy === user.id && expense.owedBy !== user.id) {
+        userOwed += expense.amount
+      } else if (expense.paidBy !== user.id && expense.owedBy === user.id) {
+        userOwes += expense.amount
       }
     })
 
-    const netBalance = user1Balance - user2Balance
-    return {
-      user1Owed: netBalance > 0 ? netBalance : 0,
-      user2Owed: netBalance < 0 ? Math.abs(netBalance) : 0,
-      netBalance,
-    }
+    const netBalance = userOwed - userOwes
+    return { userOwed, userOwes, netBalance }
   }
 
   const balance = calculateBalance()
   const recentExpenses = expenses.slice(0, 3)
+
+  // Loading state
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-violet-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 rounded-full animate-spin mx-auto mb-4">
+            <div className="w-12 h-12 bg-white rounded-full m-2"></div>
+          </div>
+          <h2 className="text-xl font-semibold bg-gradient-to-r from-purple-700 via-violet-700 to-blue-700 bg-clip-text text-transparent">
+            Carregando Dashboard...
+          </h2>
+        </div>
+      </div>
+    )
+  }
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -143,18 +135,14 @@ export default function DashboardPage() {
       Lazer: "bg-purple-100 text-purple-700 border-purple-200",
       Compras: "bg-pink-100 text-pink-700 border-pink-200",
       Saúde: "bg-red-100 text-red-700 border-red-200",
-      Educação: "bg-indigo-100 text-indigo-200",
+      Educação: "bg-indigo-100 text-indigo-700 border-indigo-200",
       Outros: "bg-gray-100 text-gray-700 border-gray-200",
     }
     return colors[category] || colors["Outros"]
   }
 
-  if (!group || users.length === 0) {
-    return null
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-blue-50/30 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-violet-50 to-blue-50 relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-10 xs:top-20 right-5 xs:right-10 w-32 h-32 xs:w-64 xs:h-64 bg-gradient-to-br from-purple-200/20 to-violet-200/20 rounded-full blur-xl xs:blur-2xl" />
@@ -164,8 +152,18 @@ export default function DashboardPage() {
       <div className="relative z-10 px-3 xs:px-4 sm:px-6 md:px-8 py-3 xs:py-4 sm:py-6 max-w-sm xs:max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto space-y-3 xs:space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="text-center relative">
-          {/* Botão de Logout */}
-          <div className="absolute top-0 right-0">
+          {/* Botões do Header */}
+          <div className="absolute top-0 right-0 flex gap-2">
+            <Link href="/configuracoes">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 xs:h-10 xs:w-10 p-0 text-gray-600 hover:text-purple-600 hover:bg-purple-50/80 transition-all duration-200 rounded-full"
+                title="Configurações"
+              >
+                <Settings className="h-4 w-4 xs:h-5 xs:w-5" />
+              </Button>
+            </Link>
             <Button
               onClick={handleLogout}
               variant="ghost"
@@ -178,10 +176,10 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center justify-center mb-3 xs:mb-4">
-            {group?.photo ? (
+            {group?.groupPhoto ? (
               <div className="w-10 h-10 xs:w-12 xs:h-12 sm:w-14 sm:h-14 rounded-xl xs:rounded-2xl overflow-hidden shadow-lg xs:shadow-xl shadow-purple-500/30 ring-1 xs:ring-2 ring-purple-100">
                 <Image
-                  src={group.photo || "/placeholder.svg"}
+                  src={group.groupPhoto || "/placeholder.svg"}
                   alt="Foto do grupo"
                   width={64}
                   height={64}
@@ -195,9 +193,11 @@ export default function DashboardPage() {
             )}
           </div>
           <h1 className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-700 via-violet-700 to-blue-700 bg-clip-text text-transparent mb-1 xs:mb-2">
-            {group?.name || "Grupo"}
+            {group?.groupName || group?.name || `Olá, ${user.name}`}
           </h1>
-          <p className="text-gray-600 text-xs xs:text-sm sm:text-base">Controle de gastos compartilhados</p>
+          <p className="text-gray-600 text-xs xs:text-sm sm:text-base">
+            {group ? 'Controle de gastos compartilhados' : 'Dashboard pessoal - Crie um grupo para começar'}
+          </p>
         </div>
 
         {/* Balance Cards */}
@@ -205,20 +205,20 @@ export default function DashboardPage() {
           <Card className="border-0 shadow-lg xs:shadow-xl bg-gradient-to-br from-purple-500 via-violet-500 to-blue-500 text-white hover:shadow-xl xs:hover:shadow-2xl hover:shadow-purple-500/40 transition-all duration-300">
             <CardContent className="p-3 xs:p-4 sm:p-6">
               <div className="flex items-center justify-between mb-3 xs:mb-4">
-                <h3 className="font-semibold text-sm xs:text-base sm:text-lg">Saldo Atual</h3>
+                <h3 className="font-semibold text-sm xs:text-base sm:text-lg">Seu Saldo</h3>
                 <div className="w-8 h-8 xs:w-10 xs:h-10 bg-white/20 rounded-lg xs:rounded-xl flex items-center justify-center backdrop-blur-sm">
                   <DollarSign className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6" />
                 </div>
               </div>
               <div className="space-y-2 xs:space-y-3">
                 <div className="flex justify-between items-center p-2 xs:p-3 bg-white/10 rounded-lg xs:rounded-xl backdrop-blur-sm hover:bg-white/15 transition-colors">
-                  <span className="font-medium text-xs xs:text-sm sm:text-base">{users[0]?.name?.split(" ")[0]}</span>
+                  <span className="font-medium text-xs xs:text-sm sm:text-base">Você recebe</span>
                   <div className="flex items-center gap-1 xs:gap-2">
-                    {balance.user1Owed > 0 ? (
+                    {balance.userOwed > 0 ? (
                       <>
                         <TrendingUp className="h-3 w-3 xs:h-4 xs:w-4" />
                         <span className="font-bold text-xs xs:text-sm sm:text-base">
-                          +R$ {balance.user1Owed.toFixed(2)}
+                          +R$ {balance.userOwed.toFixed(2)}
                         </span>
                       </>
                     ) : (
@@ -230,20 +230,38 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex justify-between items-center p-2 xs:p-3 bg-white/10 rounded-lg xs:rounded-xl backdrop-blur-sm hover:bg-white/15 transition-colors">
-                  <span className="font-medium text-xs xs:text-sm sm:text-base">{users[1]?.name?.split(" ")[0]}</span>
+                  <span className="font-medium text-xs xs:text-sm sm:text-base">Você deve</span>
                   <div className="flex items-center gap-1 xs:gap-2">
-                    {balance.user2Owed > 0 ? (
+                    {balance.userOwes > 0 ? (
                       <>
-                        <TrendingUp className="h-3 w-3 xs:h-4 xs:w-4" />
+                        <TrendingDown className="h-3 w-3 xs:h-4 xs:w-4" />
                         <span className="font-bold text-xs xs:text-sm sm:text-base">
-                          +R$ {balance.user2Owed.toFixed(2)}
+                          -R$ {balance.userOwes.toFixed(2)}
                         </span>
                       </>
                     ) : (
                       <>
-                        <TrendingDown className="h-3 w-3 xs:h-4 xs:w-4 opacity-60" />
+                        <TrendingUp className="h-3 w-3 xs:h-4 xs:w-4 opacity-60" />
                         <span className="font-bold opacity-60 text-xs xs:text-sm sm:text-base">R$ 0,00</span>
                       </>
+                    )}
+                  </div>
+                </div>
+                <div className="border-t border-white/20 pt-2 xs:pt-3 mt-3 xs:mt-4">
+                  <div className="text-center">
+                    <p className="text-xs xs:text-sm opacity-90 mb-1">Saldo Total</p>
+                    {balance.netBalance === 0 ? (
+                      <p className="font-bold text-sm xs:text-base sm:text-lg text-white">
+                        ✅ Tudo certo!
+                      </p>
+                    ) : balance.netBalance > 0 ? (
+                      <p className="font-bold text-sm xs:text-base sm:text-lg text-green-200">
+                        +R$ {balance.netBalance.toFixed(2)}
+                      </p>
+                    ) : (
+                      <p className="font-bold text-sm xs:text-base sm:text-lg text-red-200">
+                        -R$ {Math.abs(balance.netBalance).toFixed(2)}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -309,7 +327,8 @@ export default function DashboardPage() {
                 <div className="w-14 h-14 xs:w-16 xs:h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 xs:mb-4">
                   <History className="h-7 w-7 xs:h-8 xs:w-8 text-purple-500" />
                 </div>
-                <p className="text-gray-500 mb-4 xs:mb-4 text-sm xs:text-base">Nenhum gasto registrado ainda</p>
+                <p className="text-gray-500 mb-2 xs:mb-2 text-sm xs:text-base font-medium">Nenhum gasto registrado</p>
+                <p className="text-gray-400 mb-4 xs:mb-4 text-xs xs:text-sm">Comece adicionando seu primeiro gasto compartilhado</p>
                 <Link href="/gastos">
                   <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 text-sm xs:text-sm h-10 xs:h-10 px-4 xs:px-4">
                     <Plus className="h-4 w-4 xs:h-4 xs:w-4 mr-2 xs:mr-2" />
@@ -334,9 +353,13 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 text-xs xs:text-sm text-gray-600">
                       <div className="flex items-center gap-1">
-                        <span>{users.find((u) => u.id === expense.paidBy)?.name?.split(" ")[0]} pagou</span>
+                        <span>
+                          {expense.paidBy === user.id ? 'Você' : groupMembers.find((u) => u.id === expense.paidBy)?.name?.split(" ")[0] || 'Alguém'} pagou
+                        </span>
                         <span>•</span>
-                        <span>{users.find((u) => u.id === expense.owedBy)?.name?.split(" ")[0]} deve</span>
+                        <span>
+                          {expense.owedBy === user.id ? 'Você' : groupMembers.find((u) => u.id === expense.owedBy)?.name?.split(" ")[0] || 'Alguém'} deve
+                        </span>
                       </div>
                       <div className="flex items-center gap-1 text-gray-500">
                         <Calendar className="h-3 w-3" />
@@ -379,7 +402,7 @@ export default function DashboardPage() {
           <Link href="/convites">
             <Button
               variant="outline"
-              className="w-full h-10 xs:h-12 sm:h-14 border-2 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 rounded-lg xs:rounded-xl bg-white/80 backdrop-blur-sm shadow-md xs:shadow-lg hover:shadow-lg xs:hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] text-xs xs:text-sm"
+              className="w-full h-10 xs:h-12 sm:h-14 border-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 rounded-lg xs:rounded-xl bg-white/80 backdrop-blur-sm shadow-md xs:shadow-lg hover:shadow-lg xs:hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] text-xs xs:text-sm"
             >
               <Share2 className="mr-1 h-3 w-3 xs:h-4 xs:w-4" />
               <span>Convites</span>

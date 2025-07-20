@@ -54,47 +54,32 @@ export default function LoginPage() {
       // Simular delay de login
       await new Promise(resolve => setTimeout(resolve, 1500))
 
-      // Lista de usuários válidos (simulação)
-      const validUsers = [
-        { email: "admin@teste.com", password: "123456" },
-        { email: "usuario@teste.com", password: "123456" },
-        { email: "lucas@teste.com", password: "123456" },
-      ]
-
-      // Verificar se o usuário existe
-      const user = validUsers.find(u => u.email.toLowerCase() === formData.email.toLowerCase())
+      // Usar UserManager para validar credenciais
+      const UserManager = (await import('@/lib/userManager')).default
+      const user = UserManager.validateCredentials(formData.email, formData.password)
       
       if (!user) {
-        setErrors({ email: "Usuário não encontrado. Verifique o e-mail ou faça seu cadastro." })
+        setErrors({ email: "E-mail ou senha incorretos. Verifique suas credenciais." })
         return
       }
 
-      // Verificar senha
-      if (user.password !== formData.password) {
-        setErrors({ password: "Senha incorreta. Tente novamente." })
-        return
-      }
-
-      // Login bem-sucedido - salvar na sessão
-      const userData = { 
-        email: user.email, 
-        isLoggedIn: true, 
-        loginTime: new Date().toISOString() 
+      // Login bem-sucedido - criar dados da sessão
+      const authUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        userGroup: user.userGroup
       }
       
-      localStorage.setItem("user", JSON.stringify(userData))
-      localStorage.setItem("isAuthenticated", "true")
+      // Salvar no localStorage com expiração de 24 horas
+      const expirationTime = Date.now() + (24 * 60 * 60 * 1000)
+      localStorage.setItem('auth', JSON.stringify(authUser))
+      localStorage.setItem('authExpiration', expirationTime.toString())
+      localStorage.setItem('userGroup', user.userGroup || '')
 
-      // Verificar se usuário já tem grupo
-      const hasGroup = localStorage.getItem("group")
-      
-      if (hasGroup) {
-        // Se já tem grupo, vai para dashboard
-        router.push("/dashboard")
-      } else {
-        // Se não tem grupo, vai para configurações
-        router.push("/configuracoes")
-      }
+      // Após login bem-sucedido, sempre ir para criar-grupo
+      // O usuário pode criar um grupo ou pular se já tiver convite
+      router.push("/criar-grupo")
 
     } catch (error) {
       console.error("Erro no login:", error)

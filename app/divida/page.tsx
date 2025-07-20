@@ -17,9 +17,12 @@ import {
   Sparkles,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/useAuth"
+import UserManager from "@/lib/userManager"
 
 export default function DividaPage() {
   const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
   const [users, setUsers] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [paymentAmount, setPaymentAmount] = useState("")
@@ -27,49 +30,67 @@ export default function DividaPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    const user1Data = localStorage.getItem("user1")
-    const user2Data = localStorage.getItem("user2")
-    const expensesData = localStorage.getItem("expenses")
-
-    if (!user1Data || !user2Data) {
-      router.push("/")
+    if (!authLoading && !user) {
+      router.push("/login")
       return
     }
 
-    setUsers([JSON.parse(user1Data), JSON.parse(user2Data)])
-    setExpenses(JSON.parse(expensesData || "[]"))
-  }, [router])
+    if (user) {
+      // Carregar gastos específicos do usuário
+      const userExpensesKey = `expenses_${user.id}`
+      const expensesData = localStorage.getItem(userExpensesKey)
+
+      // Carregar membros do grupo se existir
+      if (user.userGroup) {
+        const allUsers = UserManager.getUsers()
+        const members = allUsers.filter(u => u.userGroup === user.userGroup)
+        setUsers(members)
+      } else {
+        setUsers([user])
+      }
+
+      setExpenses(JSON.parse(expensesData || "[]"))
+    }
+  }, [user, authLoading, router])
 
   const calculateBalance = () => {
-    let user1Balance = 0
-    let user2Balance = 0
+    if (!user || users.length === 0) {
+      return {
+        userOwed: 0,
+        userOwes: 0,
+        netBalance: 0,
+        userPaid: 0,
+        totalExpenses: 0,
+      }
+    }
+
+    let userOwed = 0  // Quanto outros devem para o usuário atual
+    let userOwes = 0  // Quanto o usuário atual deve para outros
 
     expenses.forEach((expense) => {
-      // Usar o valor devido (amount) em vez do valor total
       const owedAmount = expense.amount || 0
 
-      if (expense.paidBy === "1" && expense.owedBy === "2") {
-        user1Balance += owedAmount
-      } else if (expense.paidBy === "2" && expense.owedBy === "1") {
-        user2Balance += owedAmount
+      if (expense.paidBy === user.id && expense.owedBy !== user.id) {
+        userOwed += owedAmount
+      } else if (expense.paidBy !== user.id && expense.owedBy === user.id) {
+        userOwes += owedAmount
       }
     })
 
-    const netBalance = user1Balance - user2Balance
+    const netBalance = userOwed - userOwes
     return {
-      user1Owed: netBalance > 0 ? netBalance : 0,
-      user2Owed: netBalance < 0 ? Math.abs(netBalance) : 0,
+      userOwed,
+      userOwes,
       netBalance,
-      user1Paid: user1Balance,
-      user2Paid: user2Balance,
-      totalExpenses: user1Balance + user2Balance,
+      userPaid: userOwed,
+      totalExpenses: userOwed + userOwes,
     }
   }
 
   const balance = calculateBalance()
-  const debtorName = balance.user1Owed > 0 ? users[1]?.name?.split(" ")[0] : users[0]?.name?.split(" ")[0]
-  const creditorName = balance.user1Owed > 0 ? users[0]?.name?.split(" ")[0] : users[1]?.name?.split(" ")[0]
-  const debtAmount = Math.max(balance.user1Owed, balance.user2Owed)
+  const debtAmount = Math.abs(balance.netBalance)
+  const isUserDebtor = balance.netBalance < 0 // Se negativo, usuário deve
+  const isUserCreditor = balance.netBalance > 0 // Se positivo, usuário vai receber
 
   const handlePayment = async () => {
     const amount = Number.parseFloat(paymentAmount)
@@ -95,15 +116,20 @@ export default function DividaPage() {
         amount: amount,
         totalAmount: amount,
         category: "Pagamento",
-        paidBy: balance.user1Owed > 0 ? "2" : "1", // Quem deve está pagando
-        owedBy: balance.user1Owed > 0 ? "1" : "2", // Para quem deve
+        paidBy: user?.id || "", // Usuário atual está pagando
+        owedBy: user?.id || "", // Para si mesmo (zerando a dívida)
         splitType: "full",
         date: new Date().toISOString().split("T")[0],
       }
 
       const updatedExpenses = [paymentExpense, ...expenses]
       setExpenses(updatedExpenses)
-      localStorage.setItem("expenses", JSON.stringify(updatedExpenses))
+      
+      // Salvar no localStorage específico do usuário
+      if (user) {
+        const userExpensesKey = `expenses_${user.id}`
+        localStorage.setItem(userExpensesKey, JSON.stringify(updatedExpenses))
+      }
 
       alert(`Pagamento de R$ ${amount.toFixed(2)} registrado com sucesso!`)
       setPaymentAmount("")
@@ -168,9 +194,11 @@ export default function DividaPage() {
                     R$ {debtAmount.toFixed(2)}
                   </p>
                   <div className="inline-flex items-center px-3 xs:px-4 py-1.5 xs:py-2 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 text-red-700 rounded-full text-xs xs:text-sm font-medium">
-                    <span className="font-semibold">{debtorName}</span>
-                    <ArrowRightLeft className="h-2 w-2 xs:h-3 xs:w-3 mx-1 xs:mx-2" />
-                    <span className="font-semibold">{creditorName}</span>
+                    {isUserDebtor ? (
+                      <span>Você deve R$ {debtAmount.toFixed(2)}</span>
+                    ) : (
+                      <span>Você vai receber R$ {debtAmount.toFixed(2)}</span>
+                    )}
                   </div>
                 </div>
 
@@ -191,60 +219,40 @@ export default function DividaPage() {
           </CardContent>
         </Card>
 
-        {/* Resumo Detalhado */}
-        <div className="grid grid-cols-2 gap-3 xs:gap-4">
-          <Card className="border-0 shadow-lg xs:shadow-xl bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-500 text-white hover:shadow-2xl hover:shadow-violet-500/40 transition-all duration-300">
-            <CardContent className="p-3 xs:p-4">
-              <div className="text-center">
-                <div className="w-8 h-8 xs:w-10 xs:h-10 sm:w-12 sm:h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2 xs:mb-3 backdrop-blur-sm">
-                  <Users className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6" />
+        {/* Resumo do Saldo Atual */}
+        <Card className="border-0 shadow-lg xs:shadow-xl bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-500 text-white hover:shadow-2xl hover:shadow-violet-500/40 transition-all duration-300">
+          <CardContent className="p-4 xs:p-6">
+            <div className="text-center">
+              <div className="w-12 h-12 xs:w-16 xs:h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+                <DollarSign className="h-6 w-6 xs:h-8 xs:w-8" />
+              </div>
+              <h3 className="font-semibold mb-2 text-lg xs:text-xl">Seu Saldo</h3>
+              
+              <div className="space-y-3">
+                <div className="p-3 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <p className="text-sm opacity-90">Você recebe</p>
+                  <p className="text-xl font-bold text-green-200">R$ {balance.userOwed.toFixed(2)}</p>
                 </div>
-                <h3 className="font-semibold mb-1 xs:mb-2 text-sm xs:text-base">{users[0]?.name?.split(" ")[0]}</h3>
-                <p className="text-lg xs:text-xl sm:text-2xl font-bold mb-1">R$ {balance.user1Paid.toFixed(2)}</p>
-                <p className="text-violet-100 text-xs xs:text-sm">Total Pago</p>
-                <div className="mt-2 xs:mt-3 flex items-center justify-center gap-1 p-1.5 xs:p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-                  {balance.user1Owed > 0 ? (
-                    <>
-                      <TrendingUp className="h-3 w-3 xs:h-4 xs:w-4" />
-                      <span className="text-xs xs:text-sm font-medium">+R$ {balance.user1Owed.toFixed(2)}</span>
-                    </>
+                
+                <div className="p-3 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <p className="text-sm opacity-90">Você deve</p>
+                  <p className="text-xl font-bold text-red-200">R$ {balance.userOwes.toFixed(2)}</p>
+                </div>
+                
+                <div className="border-t border-white/20 pt-3">
+                  <p className="text-sm opacity-90 mb-1">Saldo Total</p>
+                  {balance.netBalance === 0 ? (
+                    <p className="text-2xl font-bold text-white">✅ Tudo certo!</p>
+                  ) : balance.netBalance > 0 ? (
+                    <p className="text-2xl font-bold text-green-200">+R$ {balance.netBalance.toFixed(2)}</p>
                   ) : (
-                    <>
-                      <TrendingDown className="h-3 w-3 xs:h-4 xs:w-4 opacity-60" />
-                      <span className="text-xs xs:text-sm opacity-60">-R$ {balance.user2Owed.toFixed(2)}</span>
-                    </>
+                    <p className="text-2xl font-bold text-red-200">-R$ {Math.abs(balance.netBalance).toFixed(2)}</p>
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg xs:shadow-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 text-white hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300">
-            <CardContent className="p-3 xs:p-4">
-              <div className="text-center">
-                <div className="w-8 h-8 xs:w-10 xs:h-10 sm:w-12 sm:h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2 xs:mb-3 backdrop-blur-sm">
-                  <Users className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6" />
-                </div>
-                <h3 className="font-semibold mb-1 xs:mb-2 text-sm xs:text-base">{users[1]?.name?.split(" ")[0]}</h3>
-                <p className="text-lg xs:text-xl sm:text-2xl font-bold mb-1">R$ {balance.user2Paid.toFixed(2)}</p>
-                <p className="text-blue-100 text-xs xs:text-sm">Total Pago</p>
-                <div className="mt-2 xs:mt-3 flex items-center justify-center gap-1 p-1.5 xs:p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-                  {balance.user2Owed > 0 ? (
-                    <>
-                      <TrendingUp className="h-3 w-3 xs:h-4 xs:w-4" />
-                      <span className="text-xs xs:text-sm font-medium">+R$ {balance.user2Owed.toFixed(2)}</span>
-                    </>
-                  ) : (
-                    <>
-                      <TrendingDown className="h-3 w-3 xs:h-4 xs:w-4 opacity-60" />
-                      <span className="text-xs xs:text-sm opacity-60">-R$ {balance.user1Owed.toFixed(2)}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Pagamento Manual */}
         {debtAmount > 0 && (
@@ -273,7 +281,11 @@ export default function DividaPage() {
                 <div className="space-y-3 xs:space-y-4">
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-3 xs:p-4">
                     <p className="text-blue-800 text-xs xs:text-sm">
-                      <strong>{debtorName}</strong> está registrando um pagamento para <strong>{creditorName}</strong>
+                      {isUserDebtor ? (
+                        <span>Você está registrando um pagamento de sua dívida</span>
+                      ) : (
+                        <span>Registre um recebimento de pagamento</span>
+                      )}
                     </p>
                   </div>
 
