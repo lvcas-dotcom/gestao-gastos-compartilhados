@@ -1,0 +1,41 @@
+{
+  "name": "gestao-gastos-backend",
+  "version": "1.0.0",
+  "description": "Backend API para sistema de gestão de gastos compartilhados",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "next": "15.2.4",
+    "react": "^19",
+    "react-dom": "^19",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.2.4",
+    "prisma": "^6.1.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

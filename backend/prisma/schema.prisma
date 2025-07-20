@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Dívidas criadas pelo usuário
+  createdDebts Debt[] @relation("CreatedDebts")
+  // Dívidas onde o usuário é o devedor
+  owedDebts    Debt[] @relation("OwedDebts")
+
+  @@map("users")
+}
+
+model Debt {
+  id          String   @id @default(cuid())
+  amount      Float
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  dueDate     DateTime?
+  status      DebtStatus @default(PENDING)
+
+  // Relacionamentos
+  creatorId String
+  creator   User   @relation("CreatedDebts", fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  debtorId  String
+  debtor    User   @relation("OwedDebts", fields: [debtorId], references: [id], onDelete: Cascade)
+
+  @@map("debts")
+}
+
+enum DebtStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
