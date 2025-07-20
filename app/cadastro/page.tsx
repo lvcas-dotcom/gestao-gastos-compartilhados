@@ -58,36 +58,65 @@ export default function CadastroPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
+    
     if (!validateForm()) {
       return
     }
 
     setIsLoading(true)
+    setErrors({})
 
     try {
-      // Usar UserManager para registrar o usuário
-      const UserManager = (await import('@/lib/userManager')).default
-      const result = UserManager.registerUser(formData.name, formData.email, formData.password)
+      const response = await fetch('http://localhost:3001/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+        }),
+      })
 
-      if (!result.success) {
-        setErrors({ email: result.message })
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          setErrors({ email: 'Este email já está cadastrado' })
+        } else if (data.errors) {
+          // Tratar erros de validação do backend
+          const backendErrors: { [key: string]: string } = {}
+          data.errors.forEach((error: any) => {
+            if (error.path && error.path[0]) {
+              backendErrors[error.path[0]] = error.message
+            }
+          })
+          setErrors(backendErrors)
+        } else {
+          setErrors({ general: data.message || 'Erro no cadastro' })
+        }
         return
       }
 
-      // Simular delay para melhor UX
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // Exibir mensagem de sucesso
+      // Cadastro realizado com sucesso
       setIsSuccess(true)
       
-      // Redirecionar para login após 2 segundos
+      // Salvar token e dados do usuário
+      if (data.data && data.data.token) {
+        localStorage.setItem('token', data.data.token)
+        localStorage.setItem('user', JSON.stringify(data.data.user))
+      }
+
+      // Exibir animação de sucesso por 2 segundos
       setTimeout(() => {
-        router.push("/login")
+        // Redirecionar para login ou dashboard
+        router.push('/login')
       }, 2000)
+
     } catch (error) {
-      console.error("Erro ao criar conta:", error)
-      setErrors({ email: "Erro interno. Tente novamente." })
+      console.error('Erro na requisição:', error)
+      setErrors({ general: 'Erro de conexão. Tente novamente.' })
     } finally {
       setIsLoading(false)
     }
@@ -329,6 +358,16 @@ export default function CadastroPage() {
                   </p>
                 )}
               </div>
+
+              {/* Erro geral */}
+              {errors.general && (
+                <div className="p-3 xs:p-4 bg-red-50 border border-red-200 rounded-lg xs:rounded-xl animate-in slide-in-from-left-2">
+                  <p className="text-red-600 text-xs xs:text-sm font-medium flex items-center">
+                    <span className="w-2 h-2 bg-red-500 rounded-full mr-2" />
+                    {errors.general}
+                  </p>
+                </div>
+              )}
 
               {/* Submit Button */}
               <Button

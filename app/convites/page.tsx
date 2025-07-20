@@ -46,97 +46,220 @@ export default function ConvitesPage() {
   })
 
   useEffect(() => {
-    const groupData = localStorage.getItem("group")
-    const groupConfig = localStorage.getItem("groupConfig")
-    const user1Data = localStorage.getItem("user1")
-    const user2Data = localStorage.getItem("user2")
+    const initializePage = () => {
+      const groupData = localStorage.getItem("group")
+      const groupConfig = localStorage.getItem("groupConfig")
+      let user1Data = localStorage.getItem("user1")
+      let user2Data = localStorage.getItem("user2")
 
-    if ((!groupData && !groupConfig) || !user1Data || !user2Data) {
-      router.push("/")
-      return
-    }
-
-    // Priorizar groupConfig que tem a foto, senão usar groupData
-    if (groupConfig) {
-      const config = JSON.parse(groupConfig)
-      setGroup({
-        name: config.groupName,
-        numberOfPeople: config.numberOfPeople,
-        photo: config.groupPhoto, // Esta é a foto do grupo
-      })
-    } else if (groupData) {
-      setGroup(JSON.parse(groupData))
-    }
-
-    setUsers([JSON.parse(user1Data), JSON.parse(user2Data)])
-
-    // Carregar convites salvos
-    const savedInvites = localStorage.getItem("invites")
-    if (savedInvites) {
-      try {
-        setInvites(JSON.parse(savedInvites))
-      } catch (err) {
-        console.warn("Invites corrompidos, recriando…", err)
-        localStorage.removeItem("invites")
-        setInvites([])
+      // Criar dados padrão se não existirem
+      if (!user1Data || !user2Data) {
+        const defaultUser1 = {
+          id: "1",
+          name: "Você",
+          email: "user@example.com",
+          avatar: "/placeholder-user.jpg"
+        }
+        const defaultUser2 = {
+          id: "2", 
+          name: "Membro",
+          email: "member@example.com",
+          avatar: "/placeholder-user.jpg"
+        }
+        localStorage.setItem("user1", JSON.stringify(defaultUser1))
+        localStorage.setItem("user2", JSON.stringify(defaultUser2))
+        user1Data = JSON.stringify(defaultUser1)
+        user2Data = JSON.stringify(defaultUser2)
       }
-    } else {
-      const exampleInvites: Invite[] = [
-        {
-          id: "inv_" + Date.now(),
-          groupId: "group1",
-          createdBy: "1",
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          maxUses: 5,
-          currentUses: 0,
-          status: "active",
-          createdAt: new Date().toISOString(),
-        },
-      ]
-      setInvites(exampleInvites)
-      localStorage.setItem("invites", JSON.stringify(exampleInvites))
+
+      // Priorizar groupConfig que tem a foto, senão usar groupData
+      if (groupConfig) {
+        const config = JSON.parse(groupConfig)
+        setGroup({
+          id: "group1",
+          name: config.groupName || "Meu Grupo",
+          numberOfPeople: config.numberOfPeople || 2,
+          photo: config.groupPhoto || "/placeholder-logo.png"
+        })
+      } else if (groupData) {
+        const parsed = JSON.parse(groupData)
+        setGroup({
+          ...parsed,
+          id: parsed.id || "group1",
+          photo: parsed.photo || "/placeholder-logo.png"
+        })
+      } else {
+        // Criar grupo padrão se não existe
+        const defaultGroup = {
+          id: "group1",
+          name: "Meu Grupo",
+          numberOfPeople: 2,
+          photo: "/placeholder-logo.png"
+        }
+        setGroup(defaultGroup)
+        localStorage.setItem("groupConfig", JSON.stringify({
+          groupName: defaultGroup.name,
+          numberOfPeople: defaultGroup.numberOfPeople,
+          groupPhoto: defaultGroup.photo
+        }))
+      }
+
+      setUsers([JSON.parse(user1Data), JSON.parse(user2Data)])
+      loadInvites()
     }
+
+    initializePage()
   }, [router])
+
+  const loadInvites = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        // Se não há token, usar dados simulados
+        const savedInvites = localStorage.getItem("invites")
+        if (savedInvites) {
+          try {
+            setInvites(JSON.parse(savedInvites))
+          } catch (err) {
+            console.warn("Invites corrompidos, recriando…", err)
+            localStorage.removeItem("invites")
+            setInvites([])
+          }
+        } else {
+          const exampleInvites: Invite[] = [
+            {
+              id: "inv_" + Date.now(),
+              groupId: "group1",
+              createdBy: "1",
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+              maxUses: 5,
+              currentUses: 0,
+              status: "active",
+              createdAt: new Date().toISOString(),
+            },
+          ]
+          setInvites(exampleInvites)
+          localStorage.setItem("invites", JSON.stringify(exampleInvites))
+        }
+        return
+      }
+
+      // Tentar carregar da API
+      const response = await fetch('http://localhost:3001/api/invites', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setInvites(data.data.invites || [])
+      } else {
+        // Se falhar, usar dados locais como fallback
+        const savedInvites = localStorage.getItem("invites")
+        if (savedInvites) {
+          setInvites(JSON.parse(savedInvites))
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar convites:', error)
+      // Usar dados locais como fallback
+      const savedInvites = localStorage.getItem("invites")
+      if (savedInvites) {
+        setInvites(JSON.parse(savedInvites))
+      }
+    }
+  }
 
   const generateInviteLink = (inviteId: string) => {
     return `${window.location.origin}/convite/${inviteId}`
   }
 
   const handleCreateInvite = async () => {
-    const newInvite: Invite = {
-      id: `inv_${Date.now()}`,
-      groupId: group.id,
-      createdBy: "1", // Assumindo que é o primeiro usuário
-      expiresAt: new Date(Date.now() + Number.parseInt(formData.expiresIn) * 24 * 60 * 60 * 1000).toISOString(),
-      maxUses: Number.parseInt(formData.maxUses),
-      currentUses: 0,
-      status: "active",
-      createdAt: new Date().toISOString(),
-    }
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        // Fallback para funcionamento local
+        const newInvite: Invite = {
+          id: `inv_${Date.now()}`,
+          groupId: group.id,
+          createdBy: "1",
+          expiresAt: new Date(Date.now() + Number.parseInt(formData.expiresIn) * 24 * 60 * 60 * 1000).toISOString(),
+          maxUses: Number.parseInt(formData.maxUses),
+          currentUses: 0,
+          status: "active",
+          createdAt: new Date().toISOString(),
+        }
 
-    const updatedInvites = [newInvite, ...invites]
-    setInvites(updatedInvites)
-    localStorage.setItem("invites", JSON.stringify(updatedInvites))
-    setShowCreateForm(false)
+        const updatedInvites = [newInvite, ...invites]
+        setInvites(updatedInvites)
+        localStorage.setItem("invites", JSON.stringify(updatedInvites))
+        setShowCreateForm(false)
+        return
+      }
+
+      const response = await fetch('http://localhost:3001/api/invites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          groupId: group.id,
+          maxUses: Number.parseInt(formData.maxUses),
+          expiresInDays: Number.parseInt(formData.expiresIn)
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        await loadInvites()
+        setShowCreateForm(false)
+      } else {
+        // Fallback para funcionamento local em caso de erro
+        const newInvite: Invite = {
+          id: `inv_${Date.now()}`,
+          groupId: group.id,
+          createdBy: "1",
+          expiresAt: new Date(Date.now() + Number.parseInt(formData.expiresIn) * 24 * 60 * 60 * 1000).toISOString(),
+          maxUses: Number.parseInt(formData.maxUses),
+          currentUses: 0,
+          status: "active",
+          createdAt: new Date().toISOString(),
+        }
+
+        const updatedInvites = [newInvite, ...invites]
+        setInvites(updatedInvites)
+        localStorage.setItem("invites", JSON.stringify(updatedInvites))
+        setShowCreateForm(false)
+      }
+    } catch (error) {
+      console.error('Erro ao criar convite:', error)
+      // Fallback para funcionamento local
+      const newInvite: Invite = {
+        id: `inv_${Date.now()}`,
+        groupId: group.id,
+        createdBy: "1",
+        expiresAt: new Date(Date.now() + Number.parseInt(formData.expiresIn) * 24 * 60 * 60 * 1000).toISOString(),
+        maxUses: Number.parseInt(formData.maxUses),
+        currentUses: 0,
+        status: "active",
+        createdAt: new Date().toISOString(),
+      }
+
+      const updatedInvites = [newInvite, ...invites]
+      setInvites(updatedInvites)
+      localStorage.setItem("invites", JSON.stringify(updatedInvites))
+      setShowCreateForm(false)
+    }
   }
 
-  const handleCopyLink = async (inviteId: string) => {
-    const link = generateInviteLink(inviteId)
-    try {
-      await navigator.clipboard.writeText(link)
-      setCopiedId(inviteId)
-      setTimeout(() => setCopiedId(""), 2000)
-    } catch (err) {
-      // Fallback para navegadores que não suportam clipboard API
-      const textArea = document.createElement("textarea")
-      textArea.value = link
-      document.body.appendChild(textArea)
-      textArea.select()
-      document.execCommand("copy")
-      document.body.removeChild(textArea)
-      setCopiedId(inviteId)
-      setTimeout(() => setCopiedId(""), 2000)
-    }
+  const handleCopyInviteLink = (inviteId: string) => {
+    // Usar a URL correta do frontend
+    const inviteUrl = `http://localhost:3000/convite/${inviteId}`
+    navigator.clipboard.writeText(inviteUrl)
+    setCopiedId(inviteId)
+    setTimeout(() => setCopiedId(""), 2000)
   }
 
   const handleShareWhatsApp = (inviteId: string) => {
@@ -341,7 +464,7 @@ export default function ConvitesPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleCopyLink(invite.id)}
+                        onClick={() => handleCopyInviteLink(invite.id)}
                         className={`h-8 w-8 p-0 rounded-lg transition-all duration-200 ${
                           copiedId === invite.id
                             ? "bg-purple-50 border-purple-300 text-purple-600"

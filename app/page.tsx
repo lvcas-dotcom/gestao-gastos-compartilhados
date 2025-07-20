@@ -6,25 +6,22 @@ import { useAuth } from "@/hooks/useAuth"
 
 export default function HomePage() {
   const router = useRouter()
-  const { isAuthenticated, isLoading, user } = useAuth()
+  const { isAuthenticated, isLoading, user, userGroups } = useAuth()
 
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
-        // Não autenticado, redirecionar para login
         router.push("/login")
       } else if (user) {
-        // Autenticado, verificar se tem grupo
-        if (user.userGroup) {
-          // Tem grupo, ir para dashboard
+        // Verificar se tem grupos usando a nova propriedade
+        if (user.hasGroups || userGroups.length > 0) {
           router.push("/dashboard")
         } else {
-          // Não tem grupo, ir para criar grupo (onde pode criar ou pular)
           router.push("/criar-grupo")
         }
       }
     }
-  }, [isAuthenticated, isLoading, user, router])
+  }, [isAuthenticated, isLoading, user, userGroups, router])
 
   // Página de loading
   return (

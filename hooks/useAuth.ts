@@ -9,56 +9,81 @@ interface AuthUser {
   name: string
   email: string
   userGroup?: string
+  hasGroups?: boolean
 }
 
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [userGroups, setUserGroups] = useState<any[]>([])
   const router = useRouter()
   const pathname = usePathname()
 
+  // Função para verificar grupos do usuário
+  const checkUserGroups = async (token: string) => {
+    try {
+      const response = await fetch('http://localhost:3001/api/user/groups', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUserGroups(data.data.groups)
+        return data.data.hasGroups
+      }
+    } catch (error) {
+      console.log('Erro ao verificar grupos:', error)
+    }
+    return false
+  }
+
   useEffect(() => {
-    const checkAuth = () => {
+    useEffect(() => {
+    const checkAuth = async () => {
       try {
         const storedAuth = localStorage.getItem('auth')
         const storedExpiration = localStorage.getItem('authExpiration')
+        const token = localStorage.getItem('token')
         
-        if (storedAuth && storedExpiration) {
+        if (storedAuth && storedExpiration && token) {
           const expirationTime = parseInt(storedExpiration)
           if (Date.now() < expirationTime) {
             const authData = JSON.parse(storedAuth)
-            // Verificar se o usuário ainda existe no sistema
-            const existingUser = UserManager.findUserByEmail(authData.email)
-            if (existingUser) {
-              setUser({
-                id: existingUser.id,
-                name: existingUser.name,
-                email: existingUser.email,
-                userGroup: existingUser.userGroup
-              })
-            } else {
-              // Usuário não existe mais, fazer logout
-              logout()
-            }
+            
+            // Verificar grupos do usuário via API
+            const hasGroups = await checkUserGroups(token)
+            
+            setUser({
+              id: authData.id,
+              name: authData.name,
+              email: authData.email,
+              userGroup: authData.userGroup,
+              hasGroups: hasGroups
+            })
           } else {
             logout()
           }
         } else {
           // Não autenticado, redirecionar para login se não estiver em páginas públicas
-          const publicPages = ["/login", "/cadastro", "/"]
-          if (!publicPages.includes(pathname)) {
-            router.push("/login")
+          const publicRoutes = ['/login', '/cadastro']
+          if (!publicRoutes.includes(pathname)) {
+            router.push('/login')
           }
         }
       } catch (error) {
-        console.error("Erro ao verificar autenticação:", error)
+        console.error('Erro na verificação de autenticação:', error)
         logout()
+      } finally {
+        setIsLoading(false)
       }
-      
-      setIsLoading(false)
     }
 
     checkAuth()
+  }, [pathname, router])
   }, [pathname, router])
 
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
@@ -125,6 +150,7 @@ export function useAuth() {
     user,
     isAuthenticated,
     isLoading,
+    userGroups,
     login,
     logout,
     updateUser
