@@ -107,11 +107,14 @@ export default function CadastroPage() {
       if (data.data && data.data.token) {
         localStorage.setItem('token', data.data.token)
         localStorage.setItem('user', JSON.stringify(data.data.user))
+        
+        // Marcar que é o primeiro acesso (não definir a flag ainda)
+        // Será definida no primeiro login
       }
 
       // Exibir animação de sucesso por 2 segundos
       setTimeout(() => {
-        // Redirecionar para login ou dashboard
+        // Redirecionar para login 
         router.push('/login')
       }, 2000)
 

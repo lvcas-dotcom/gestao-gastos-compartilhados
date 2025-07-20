@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import UserManager, { User } from '@/lib/userManager'
+import { API_ENDPOINTS } from '@/lib/api'
+import { groupService, type Group } from '@/lib/groupService'
 
 interface AuthUser {
   id: string
@@ -15,25 +16,17 @@ interface AuthUser {
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [userGroups, setUserGroups] = useState<any[]>([])
+  const [userGroups, setUserGroups] = useState<Group[]>([])
   const router = useRouter()
   const pathname = usePathname()
 
-  // Função para verificar grupos do usuário
-  const checkUserGroups = async (token: string) => {
+  // Função para verificar grupos do usuário usando o service
+  const checkUserGroups = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/user/groups', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setUserGroups(data.data.groups)
-        return data.data.hasGroups
+      const result = await groupService.getUserGroups()
+      if (result.success) {
+        setUserGroups(result.groups)
+        return result.hasGroups
       }
     } catch (error) {
       console.log('Erro ao verificar grupos:', error)
@@ -48,7 +41,7 @@ export function useAuth() {
         
         if (token) {
           // Verificar se o token é válido com a API
-          const response = await fetch('http://localhost:3001/api/auth/verify', {
+          const response = await fetch(API_ENDPOINTS.AUTH.VERIFY, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -59,7 +52,7 @@ export function useAuth() {
             const data = await response.json()
             
             // Verificar grupos do usuário via API
-            const hasGroups = await checkUserGroups(token)
+            const hasGroups = await checkUserGroups()
             
             setUser({
               id: data.user.id,
@@ -92,7 +85,7 @@ export function useAuth() {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,25 +99,41 @@ export function useAuth() {
       const data = await response.json()
 
       if (response.ok && data.data && data.data.token) {
+        // Salvar token primeiro
+        localStorage.setItem('token', data.data.token)
+        localStorage.setItem('user', JSON.stringify(data.data.user))
+        
+        // Verificar grupos do usuário via API
+        const hasGroups = await checkUserGroups()
+        
         // Login bem-sucedido
         const authUser: AuthUser = {
           id: data.data.user.id,
           name: data.data.user.name,
           email: data.data.user.email,
-          userGroup: data.data.user.user_group
+          userGroup: data.data.user.user_group,
+          hasGroups: hasGroups
         }
         
         setUser(authUser)
         
-        // Salvar token
-        localStorage.setItem('token', data.data.token)
-        localStorage.setItem('user', JSON.stringify(data.data.user))
+        // Verificar se é o primeiro login do usuário
+        const firstLoginKey = `first_login_${data.data.user.id}`
+        const hasLoggedBefore = localStorage.getItem(firstLoginKey)
         
         // Navegar baseado no status do usuário
-        if (data.data.user.user_group) {
+        if (hasGroups) {
           router.push('/dashboard')
         } else {
-          router.push('/criar-grupo')
+          // Verificar se é o primeiro login do usuário
+          if (!hasLoggedBefore) {
+            // Marcar como primeiro login e ir para dashboard (que vai mostrar o pop-up)
+            localStorage.setItem(firstLoginKey, 'true')
+            localStorage.setItem('show_first_group_modal', 'true')
+          }
+          
+          // Sempre vai para dashboard agora
+          router.push('/dashboard')
         }
         
         return { success: true, message: 'Login realizado com sucesso!' }
@@ -179,9 +188,7 @@ export function useAuth() {
       
       // Atualizar no localStorage
       localStorage.setItem('auth', JSON.stringify(updatedUser))
-      
-      // Atualizar no UserManager
-      UserManager.updateUser(user.id, updates)
+      localStorage.setItem('user', JSON.stringify(updatedUser))
     }
   }
 
@@ -194,6 +201,7 @@ export function useAuth() {
     userGroups,
     login,
     logout,
-    updateUser
+    updateUser,
+    checkUserGroups
   }
 }

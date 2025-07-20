@@ -10,9 +10,13 @@ export const API_ENDPOINTS = {
   USER: {
     UPDATE: `${API_BASE_URL}/api/user/update`,
     DELETE: `${API_BASE_URL}/api/user/delete`,
+    GROUPS: `${API_BASE_URL}/api/user/groups`,
   },
   GROUPS: {
-    CREATE: `${API_BASE_URL}/api/groups/create`,
+    CREATE: `${API_BASE_URL}/api/groups`,
+    LIST: `${API_BASE_URL}/api/groups`,
+    UPDATE: `${API_BASE_URL}/api/groups`,
+    DELETE: `${API_BASE_URL}/api/groups`,
   },
   INVITES: {
     LIST: `${API_BASE_URL}/api/invites`,

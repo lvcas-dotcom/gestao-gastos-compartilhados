@@ -4,6 +4,9 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Plus,
   History,
@@ -17,12 +20,15 @@ import {
   Share2,
   LogOut,
   Settings,
+  X,
+  Camera,
+  Upload,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { useAuth } from "@/hooks/useAuth"
-import UserManager from "@/lib/userManager"
+import { groupService } from "@/lib/groupService"
 
 interface Expense {
   id: string
@@ -40,20 +46,30 @@ export default function DashboardPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [group, setGroup] = useState<any>(null)
   const [groupMembers, setGroupMembers] = useState<any[]>([])
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
+  const [showFirstGroupModal, setShowFirstGroupModal] = useState(false)
+  const [newGroupName, setNewGroupName] = useState("")
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false)
+  const [groupFormData, setGroupFormData] = useState({
+    groupName: "",
+    numberOfPeople: "",
+    groupPhoto: "",
+  })
+  const [photoPreview, setPhotoPreview] = useState<string>("")
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
     if (!isLoading && user) {
-      // Carregar dados do grupo se o usuário tem um
-      if (user.userGroup) {
-        const userGroup = UserManager.getUserGroup(user.id)
-        if (userGroup) {
-          setGroup(userGroup)
-          
-          // Carregar membros do grupo
-          const allUsers = UserManager.getUsers()
-          const members = allUsers.filter(u => u.userGroup === user.userGroup)
-          setGroupMembers(members)
-        }
+      // Verificar se deve mostrar o modal de primeiro grupo
+      const shouldShowFirstModal = localStorage.getItem('show_first_group_modal')
+      if (shouldShowFirstModal === 'true' && !user.hasGroups) {
+        setShowFirstGroupModal(true)
+        localStorage.removeItem('show_first_group_modal')
+      }
+
+      // Carregar dados dos grupos se o usuário tem grupos
+      if (user.hasGroups) {
+        loadUserGroups()
       }
 
       // Carregar configurações do grupo (foto, etc.)
@@ -85,8 +101,130 @@ export default function DashboardPage() {
     }
   }, [user, isLoading, router])
 
+  const loadUserGroups = async () => {
+    if (!user) return
+    
+    try {
+      const result = await groupService.getAllUserGroups()
+      if (result.success && result.groups.length > 0) {
+        // Usar o primeiro grupo como grupo ativo (pode ser melhorado com seleção)
+        const activeGroup = result.groups[0]
+        setGroup(activeGroup)
+        setGroupMembers([]) // Por enquanto, vamos carregar membros depois
+      }
+    } catch (error) {
+      console.error('Erro ao carregar grupos:', error)
+    }
+  }
+
   const handleLogout = () => {
     logout()
+  }
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim() || !user) return
+
+    setIsCreatingGroup(true)
+
+    try {
+      // Criar grupo usando groupService
+      const result = await groupService.createGroup({
+        name: newGroupName.trim()
+      })
+      
+      if (result.success && result.group) {
+        // Atualizar estado local
+        setGroup(result.group)
+        
+        // Salvar configuração do grupo
+        const groupConfig = {
+          groupName: result.group.name,
+          numberOfPeople: 1, // Por enquanto só o criador
+        }
+        localStorage.setItem("groupConfig", JSON.stringify(groupConfig))
+
+        // Recarregar grupos do usuário
+        await loadUserGroups()
+
+        // Limpar formulário e fechar modal
+        setNewGroupName("")
+        setShowCreateGroupModal(false)
+        
+        // Recarregar dados
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error("Erro ao criar grupo:", error)
+    } finally {
+      setIsCreatingGroup(false)
+    }
+  }
+
+  const validateGroupForm = () => {
+    const newErrors: { [key: string]: string } = {}
+
+    if (!groupFormData.groupName.trim()) {
+      newErrors.groupName = "Nome do grupo é obrigatório"
+    } else if (groupFormData.groupName.trim().length < 3) {
+      newErrors.groupName = "Nome deve ter pelo menos 3 caracteres"
+    }
+
+    if (!groupFormData.numberOfPeople) {
+      newErrors.numberOfPeople = "Selecione o número de pessoas"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleCompleteGroupSetup = async () => {
+    if (!validateGroupForm() || !user) return
+
+    setIsCreatingGroup(true)
+
+    try {
+      // Criar grupo usando groupService
+      const result = await groupService.createGroup({
+        name: groupFormData.groupName.trim(),
+        description: `Grupo com ${groupFormData.numberOfPeople} pessoas`
+      })
+      
+      if (result.success && result.group) {
+        // Salvar configuração do grupo
+        const groupConfig = {
+          groupName: groupFormData.groupName,
+          numberOfPeople: parseInt(groupFormData.numberOfPeople),
+          groupPhoto: groupFormData.groupPhoto,
+        }
+        localStorage.setItem("groupConfig", JSON.stringify(groupConfig))
+
+        // Recarregar grupos do usuário
+        await loadUserGroups()
+
+        // Limpar formulário e fechar modal
+        setGroupFormData({ groupName: "", numberOfPeople: "", groupPhoto: "" })
+        setPhotoPreview("")
+        setShowFirstGroupModal(false)
+        setErrors({})
+      }
+    } catch (error) {
+      console.error("Erro ao criar grupo:", error)
+    } finally {
+      setIsCreatingGroup(false)
+    }
+  }
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        setPhotoPreview(result)
+        setGroupFormData((prev) => ({ ...prev, groupPhoto: result }))
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   const calculateBalance = () => {
@@ -117,12 +255,9 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-violet-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 rounded-full animate-spin mx-auto mb-4">
+          <div className="w-16 h-16 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 rounded-full animate-spin mx-auto">
             <div className="w-12 h-12 bg-white rounded-full m-2"></div>
           </div>
-          <h2 className="text-xl font-semibold bg-gradient-to-r from-purple-700 via-violet-700 to-blue-700 bg-clip-text text-transparent">
-            Carregando Dashboard...
-          </h2>
         </div>
       </div>
     )
@@ -390,14 +525,13 @@ export default function DashboardPage() {
               <span>Novo Gasto</span>
             </Button>
           </Link>
-          <Link href="/criar-grupo">
-            <Button 
-              className="w-full h-10 xs:h-12 sm:h-14 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 text-white shadow-lg xs:shadow-xl shadow-green-500/30 rounded-lg xs:rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] hover:shadow-xl xs:hover:shadow-2xl hover:shadow-green-500/40 group text-xs xs:text-sm"
-            >
-              <Users className="mr-1 h-3 w-3 xs:h-4 xs:w-4" />
-              <span>Criar Grupo</span>
-            </Button>
-          </Link>
+          <Button 
+            onClick={() => setShowCreateGroupModal(true)}
+            className="w-full h-10 xs:h-12 sm:h-14 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 hover:from-purple-700 hover:via-violet-700 hover:to-blue-700 text-white shadow-lg xs:shadow-xl shadow-purple-500/30 rounded-lg xs:rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] hover:shadow-xl xs:hover:shadow-2xl hover:shadow-purple-500/40 group text-xs xs:text-sm"
+          >
+            <Users className="mr-1 h-3 w-3 xs:h-4 xs:w-4" />
+            <span>Criar Grupo</span>
+          </Button>
           <Link href="/divida">
             <Button
               variant="outline"
@@ -417,7 +551,286 @@ export default function DashboardPage() {
             </Button>
           </Link>
         </div>
+
+        {/* Additional Group Management */}
+        {group && (
+          <div className="mt-4 xs:mt-6">
+            <Link href="/meus-grupos">
+              <Button
+                variant="outline"
+                className="w-full h-10 xs:h-12 sm:h-14 border-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300 rounded-lg xs:rounded-xl bg-white/80 backdrop-blur-sm shadow-md xs:shadow-lg hover:shadow-lg xs:hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] text-xs xs:text-sm"
+              >
+                <Settings className="mr-1 xs:mr-2 h-3 w-3 xs:h-4 xs:w-4" />
+                <span>Gerenciar Meus Grupos</span>
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
+
+      {/* Modal Criar Grupo */}
+      {showCreateGroupModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowCreateGroupModal(false)
+              setNewGroupName("")
+            }
+          }}
+        >
+          <div className="bg-white rounded-xl xs:rounded-2xl shadow-2xl w-full max-w-md mx-auto animate-in zoom-in-95 duration-200">
+            <div className="p-4 xs:p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg xs:text-xl font-semibold bg-gradient-to-r from-purple-700 to-blue-700 bg-clip-text text-transparent">
+                  Criar Novo Grupo
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowCreateGroupModal(false)
+                    setNewGroupName("")
+                  }}
+                  className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="groupName" className="text-sm font-medium text-gray-700">
+                    Nome do Grupo
+                  </Label>
+                  <Input
+                    id="groupName"
+                    placeholder="Digite o nome do grupo..."
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    className="mt-2 h-10 xs:h-12 border-2 border-gray-200 focus:border-purple-500 rounded-lg"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newGroupName.trim()) {
+                        handleCreateGroup()
+                      } else if (e.key === 'Escape') {
+                        setShowCreateGroupModal(false)
+                        setNewGroupName("")
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowCreateGroupModal(false)
+                      setNewGroupName("")
+                    }}
+                    className="flex-1 h-10 xs:h-12"
+                    disabled={isCreatingGroup}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleCreateGroup}
+                    disabled={!newGroupName.trim() || isCreatingGroup}
+                    className="flex-1 h-10 xs:h-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                  >
+                    {isCreatingGroup ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Users className="w-4 h-4 mr-2" />
+                        Criar
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Primeiro Grupo */}
+      {showFirstGroupModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl xs:rounded-2xl shadow-2xl w-full max-w-lg mx-auto animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="p-4 xs:p-6">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 via-violet-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-xl xs:text-2xl font-bold bg-gradient-to-r from-purple-700 via-violet-700 to-blue-700 bg-clip-text text-transparent mb-2">
+                  Configure seu Grupo
+                </h2>
+                <p className="text-gray-600 text-sm xs:text-base">
+                  Vamos configurar seu primeiro grupo para controle de gastos compartilhados
+                </p>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4 xs:space-y-6">
+                {/* Nome do Grupo */}
+                <div>
+                  <Label htmlFor="firstGroupName" className="text-sm font-semibold text-gray-700 flex items-center mb-2">
+                    <Users className="h-4 w-4 mr-2 text-purple-600" />
+                    Nome do Grupo
+                  </Label>
+                  <Input
+                    id="firstGroupName"
+                    placeholder="Ex: Casa da Família Silva"
+                    value={groupFormData.groupName}
+                    onChange={(e) => {
+                      setGroupFormData(prev => ({ ...prev, groupName: e.target.value }))
+                      if (errors.groupName) {
+                        setErrors(prev => ({ ...prev, groupName: "" }))
+                      }
+                    }}
+                    className={`h-12 border-2 rounded-lg text-base transition-all duration-300 ${
+                      errors.groupName
+                        ? "border-red-300 focus:border-red-500 bg-red-50/50"
+                        : "border-gray-200 focus:border-purple-500 bg-white/70 hover:border-purple-300"
+                    } focus:ring-4 focus:ring-purple-500/20`}
+                  />
+                  {errors.groupName && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                      <span className="w-1 h-1 bg-red-500 rounded-full mr-2" />
+                      {errors.groupName}
+                    </p>
+                  )}
+                </div>
+
+                {/* Número de Pessoas */}
+                <div>
+                  <Label htmlFor="numberOfPeople" className="text-sm font-semibold text-gray-700 flex items-center mb-2">
+                    <Sparkles className="h-4 w-4 mr-2 text-purple-600" />
+                    Quantas pessoas no grupo?
+                  </Label>
+                  <Select
+                    value={groupFormData.numberOfPeople}
+                    onValueChange={(value) => {
+                      setGroupFormData(prev => ({ ...prev, numberOfPeople: value }))
+                      if (errors.numberOfPeople) {
+                        setErrors(prev => ({ ...prev, numberOfPeople: "" }))
+                      }
+                    }}
+                  >
+                    <SelectTrigger className={`h-12 border-2 rounded-lg text-base transition-all duration-300 ${
+                      errors.numberOfPeople
+                        ? "border-red-300 focus:border-red-500 bg-red-50/50"
+                        : "border-gray-200 focus:border-purple-500 bg-white/70 hover:border-purple-300"
+                    }`}>
+                      <SelectValue placeholder="Selecione o número de pessoas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">2 pessoas</SelectItem>
+                      <SelectItem value="3">3 pessoas</SelectItem>
+                      <SelectItem value="4">4 pessoas</SelectItem>
+                      <SelectItem value="5">5 pessoas</SelectItem>
+                      <SelectItem value="6">6 pessoas</SelectItem>
+                      <SelectItem value="7">7 pessoas</SelectItem>
+                      <SelectItem value="8">8 pessoas</SelectItem>
+                      <SelectItem value="9">9 pessoas</SelectItem>
+                      <SelectItem value="10">10+ pessoas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.numberOfPeople && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                      <span className="w-1 h-1 bg-red-500 rounded-full mr-2" />
+                      {errors.numberOfPeople}
+                    </p>
+                  )}
+                </div>
+
+                {/* Upload de Foto */}
+                <div>
+                  <Label className="text-sm font-semibold text-gray-700 flex items-center mb-2">
+                    <Camera className="h-4 w-4 mr-2 text-purple-600" />
+                    Foto do Grupo (opcional)
+                  </Label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-xl flex items-center justify-center overflow-hidden">
+                      {photoPreview ? (
+                        <Image
+                          src={photoPreview}
+                          alt="Preview"
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Upload className="h-6 w-6 text-purple-600" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                        id="photo-upload"
+                      />
+                      <Label
+                        htmlFor="photo-upload"
+                        className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 border border-purple-200 rounded-lg text-purple-700 hover:text-purple-800 transition-all"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Escolher Foto
+                      </Label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        JPG, PNG até 5MB
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={handleCompleteGroupSetup}
+                    disabled={isCreatingGroup}
+                    className="flex-1 h-12 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 hover:from-purple-700 hover:via-violet-700 hover:to-blue-700 text-white shadow-lg rounded-lg transition-all duration-300"
+                  >
+                    {isCreatingGroup ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Users className="w-4 h-4 mr-2" />
+                        Criar Grupo
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Info Card */}
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mt-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-purple-800 mb-1 text-sm">
+                      Dica para começar
+                    </h4>
+                    <p className="text-purple-700 text-xs leading-relaxed">
+                      Você pode convidar outras pessoas para o grupo depois de criá-lo. 
+                      Por enquanto, vamos configurar o básico!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

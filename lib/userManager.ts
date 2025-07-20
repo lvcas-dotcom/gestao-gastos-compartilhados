@@ -147,6 +147,11 @@ class UserManager {
     const groups = this.getGroups()
     return groups.find(group => group.id === user.userGroup) || null
   }
+
+  static updateUserGroup(userId: string, groupId: string): { success: boolean; message: string } {
+    const result = this.updateUser(userId, { userGroup: groupId })
+    return result
+  }
 }
 
 export default UserManager

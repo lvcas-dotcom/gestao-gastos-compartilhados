@@ -327,10 +327,7 @@ export default function DividaPage() {
                       className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 hover:from-violet-700 hover:via-purple-700 hover:to-pink-700 text-white rounded-xl h-9 xs:h-10 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-xs xs:text-sm"
                     >
                       {isLoading ? (
-                        <div className="flex items-center gap-1 xs:gap-2">
-                          <div className="w-3 h-3 xs:w-4 xs:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span className="text-xs">Processando...</span>
-                        </div>
+                        <div className="w-3 h-3 xs:w-4 xs:h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                       ) : (
                         <div className="flex items-center gap-1 xs:gap-2">
                           <CheckCircle className="h-3 w-3 xs:h-4 xs:w-4" />

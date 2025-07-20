@@ -468,10 +468,7 @@ export default function GastosPage() {
                 className="w-full h-10 xs:h-12 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 hover:from-purple-700 hover:via-violet-700 hover:to-blue-700 text-white font-semibold text-sm xs:text-base shadow-xl shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] hover:shadow-2xl hover:shadow-purple-500/40 group"
               >
                 {isLoading ? (
-                  <div className="flex items-center gap-2 xs:gap-3">
-                    <div className="w-4 h-4 xs:w-5 xs:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span className="text-xs xs:text-sm">Salvando...</span>
-                  </div>
+                  <div className="w-4 h-4 xs:w-5 xs:h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
                   <div className="flex items-center gap-2 xs:gap-3">
                     <CheckCircle className="h-4 w-4 xs:h-5 xs:w-5" />
