@@ -124,7 +124,32 @@ export default function ConfiguracoesPage() {
   }
 
   if (!user) {
-    return <div>Carregando...</div>
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-violet-50 to-blue-50 relative overflow-hidden flex items-center justify-center">
+        {/* Background decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-20 xs:-top-40 -right-20 xs:-right-40 w-40 h-40 xs:w-80 xs:h-80 bg-gradient-to-br from-purple-200/40 to-violet-300/40 rounded-full blur-2xl xs:blur-3xl animate-pulse" />
+          <div className="absolute -bottom-20 xs:-bottom-40 -left-20 xs:-left-40 w-40 h-40 xs:w-80 xs:h-80 bg-gradient-to-tr from-blue-200/40 to-indigo-300/40 rounded-full blur-2xl xs:blur-3xl animate-pulse" />
+        </div>
+
+        <div className="relative z-10 text-center px-4">
+          <Card className="border-0 shadow-xl xs:shadow-2xl shadow-purple-500/15 bg-white/90 backdrop-blur-xl ring-1 ring-purple-100/50 max-w-md mx-auto">
+            <CardContent className="p-6 xs:p-8">
+              <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-purple-500 to-violet-500 rounded-full flex items-center justify-center mx-auto mb-4 xs:mb-6 shadow-lg shadow-purple-500/30">
+                <Settings className="h-8 w-8 xs:h-10 xs:w-10 text-white animate-spin" />
+              </div>
+              <h1 className="text-xl xs:text-2xl font-code-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent mb-2 xs:mb-3">
+                Carregando Configurações...
+              </h1>
+              <p className="text-gray-600 text-sm xs:text-base leading-relaxed mb-4 xs:mb-6">
+                Aguarde enquanto carregamos suas informações
+              </p>
+              <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (
