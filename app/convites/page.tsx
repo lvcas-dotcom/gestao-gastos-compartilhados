@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { API_ENDPOINTS } from "@/lib/api"
 
 interface Invite {
   id: string
@@ -145,7 +146,7 @@ export default function ConvitesPage() {
       }
 
       // Tentar carregar da API
-      const response = await fetch('http://localhost:3001/api/invites', {
+      const response = await fetch(API_ENDPOINTS.INVITES.LIST, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -198,7 +199,7 @@ export default function ConvitesPage() {
         return
       }
 
-      const response = await fetch('http://localhost:3001/api/invites', {
+      const response = await fetch(API_ENDPOINTS.INVITES.CREATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

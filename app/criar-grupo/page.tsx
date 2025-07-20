@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users, Camera, ArrowRight, Sparkles, Upload, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { API_ENDPOINTS } from "@/lib/api"
 
 export default function ConfigurarGrupo() {
   const router = useRouter()
@@ -68,7 +69,7 @@ export default function ConfigurarGrupo() {
         return
       }
 
-      const response = await fetch('http://localhost:3001/api/groups/create', {
+      const response = await fetch(API_ENDPOINTS.GROUPS.CREATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

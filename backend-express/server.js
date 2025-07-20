@@ -5,16 +5,19 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 
 const app = express()
-const port = 3001
-const JWT_SECRET = 'seu-jwt-secret-super-secreto'
+const port = process.env.PORT || 3001
+const JWT_SECRET = process.env.JWT_SECRET || 'seu-jwt-secret-super-secreto'
 
 // Middleware
-app.use(cors())
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}))
 app.use(express.json())
 
 // Configuração do banco
 const dbConfig = {
-  connectionString: 'postgresql://postgres:oskunks@db.oajsszzpeuhxbarwpbdn.supabase.co:5432/postgres'
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:oskunks@db.oajsszzpeuhxbarwpbdn.supabase.co:5432/postgres'
 }
 
 // Rota de login

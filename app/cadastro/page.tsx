@@ -10,6 +10,7 @@ import { Mail, Lock, Eye, EyeOff, UserPlus, User, CheckCircle, Sparkles } from "
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import { API_ENDPOINTS } from "@/lib/api"
 
 export default function CadastroPage() {
   const router = useRouter()
@@ -67,7 +68,7 @@ export default function CadastroPage() {
     setErrors({})
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/register', {
+      const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

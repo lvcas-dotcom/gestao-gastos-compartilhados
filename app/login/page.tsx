@@ -10,6 +10,7 @@ import { Mail, Lock, Eye, EyeOff, LogIn, UserPlus, Sparkles } from "lucide-react
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import { API_ENDPOINTS } from "@/lib/api"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -51,7 +52,7 @@ export default function LoginPage() {
     setErrors({}) // Limpar erros anteriores
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

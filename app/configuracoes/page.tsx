@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Settings, User, Bell, Shield, LogOut, Trash2, Save, ArrowLeft } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import Link from "next/link"
+import { API_ENDPOINTS } from "@/lib/api"
 
 export default function ConfiguracoesPage() {
   const { user, updateUser, logout } = useAuth()
@@ -45,7 +46,7 @@ export default function ConfiguracoesPage() {
         return
       }
 
-      const response = await fetch('http://localhost:3001/api/user/update', {
+      const response = await fetch(API_ENDPOINTS.USER.UPDATE, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +86,7 @@ export default function ConfiguracoesPage() {
           return
         }
 
-        const response = await fetch('http://localhost:3001/api/user/delete', {
+        const response = await fetch(API_ENDPOINTS.USER.DELETE, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`
