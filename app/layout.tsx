@@ -4,7 +4,6 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
-import AuthGuard from "@/components/auth-guard"
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -91,9 +90,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans overflow-x-hidden`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <AuthGuard>
-            {children}
-          </AuthGuard>
+          {children}
           <Toaster />
         </ThemeProvider>
       </body>
