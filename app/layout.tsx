@@ -5,7 +5,10 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ 
+  subsets: ["latin"],
+  variable: "--font-inter",
+})
 
 export const metadata: Metadata = {
   title: "Controle de Gastos Compartilhados",
@@ -85,7 +88,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.className} overflow-x-hidden`}>
+      <body className={`${inter.variable} font-sans overflow-x-hidden`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}
           <Toaster />

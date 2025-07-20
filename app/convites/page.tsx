@@ -16,7 +16,6 @@ import {
   Clock,
   Trash2,
   MessageCircle,
-  Mail,
   ExternalLink,
   Sparkles,
 } from "lucide-react"
@@ -142,17 +141,9 @@ export default function ConvitesPage() {
 
   const handleShareWhatsApp = (inviteId: string) => {
     const link = generateInviteLink(inviteId)
-    const message = `Olá! Você foi convidado(a) para participar do grupo "${group?.name}" no app de controle de gastos. Clique no link para entrar: ${link}`
+    const message = `🎯 *Convite para Gestão de Gastos Compartilhados*\n\nOlá! Você foi convidado(a) para participar do grupo *"${group?.name}"* 💰\n\n📊 Organize e controle gastos em grupo de forma fácil e transparente!\n\n👆 Clique no link abaixo para entrar:\n${link}\n\n✨ Vamos economizar juntos!`
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, "_blank")
-  }
-
-  const handleShareEmail = (inviteId: string) => {
-    const link = generateInviteLink(inviteId)
-    const subject = `Convite para o grupo ${group?.name}`
-    const body = `Olá!\n\nVocê foi convidado(a) para participar do grupo "${group?.name}" no nosso app de controle de gastos compartilhados.\n\nClique no link abaixo para aceitar o convite:\n${link}\n\nAté logo!`
-    const emailUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    window.open(emailUrl)
   }
 
   const handleDeleteInvite = (inviteId: string) => {
@@ -366,27 +357,18 @@ export default function ConvitesPage() {
                         size="sm"
                         variant="outline"
                         onClick={() => handleShareWhatsApp(invite.id)}
-                        className="flex-1 h-8 text-xs border-green-200 text-green-600 hover:bg-green-50 hover:border-green-300 rounded-lg transition-all duration-200"
+                        className="flex-1 h-10 text-sm font-medium border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300 rounded-lg transition-all duration-200 shadow-sm"
                       >
-                        <MessageCircle className="h-3 w-3 mr-1" />
-                        WhatsApp
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleShareEmail(invite.id)}
-                        className="flex-1 h-8 text-xs border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 rounded-lg transition-all duration-200"
-                      >
-                        <Mail className="h-3 w-3 mr-1" />
-                        Email
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Compartilhar no WhatsApp
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleDeleteInvite(invite.id)}
-                        className="h-8 w-8 p-0 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg transition-all duration-200"
+                        className="h-10 w-10 p-0 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg transition-all duration-200"
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
