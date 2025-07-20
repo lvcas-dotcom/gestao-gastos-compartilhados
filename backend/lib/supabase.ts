@@ -13,7 +13,7 @@ export const pool = new Pool({
 // Cliente Supabase (para funcionalidades futuras) - opcional
 export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null
 
-// Wrapper para facilitar a migração do Prisma
+// Funções utilitárias para operações de banco de dados
 export const db = {
   user: {
     findUnique: async ({ where }: { where: { email?: string; id?: string } }) => {

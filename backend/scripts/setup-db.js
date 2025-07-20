@@ -57,12 +57,59 @@ async function setupDatabase() {
     `)
     console.log('✅ Tabela debts criada')
 
+    // Criar tabela de grupos
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS groups (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `)
+    console.log('✅ Tabela groups criada')
+
+    // Criar tabela de membros dos grupos
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS group_members (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(50) DEFAULT 'member',
+        joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(group_id, user_id)
+      )
+    `)
+    console.log('✅ Tabela group_members criada')
+
+    // Criar tabela de convites
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS invites (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at TIMESTAMP WITH TIME ZONE,
+        max_uses INTEGER DEFAULT 1,
+        current_uses INTEGER DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `)
+    console.log('✅ Tabela invites criada')
+
     // Criar índices para melhor performance
     await pool.query(`
-      CREATE INDEX idx_debts_creator_id ON debts(creator_id);
-      CREATE INDEX idx_debts_debtor_id ON debts(debtor_id);
-      CREATE INDEX idx_debts_status ON debts(status);
-      CREATE INDEX idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_debts_creator_id ON debts(creator_id);
+      CREATE INDEX IF NOT EXISTS idx_debts_debtor_id ON debts(debtor_id);
+      CREATE INDEX IF NOT EXISTS idx_debts_status ON debts(status);
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_groups_created_by ON groups(created_by);
+      CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON group_members(group_id);
+      CREATE INDEX IF NOT EXISTS idx_group_members_user_id ON group_members(user_id);
+      CREATE INDEX IF NOT EXISTS idx_invites_group_id ON invites(group_id);
+      CREATE INDEX IF NOT EXISTS idx_invites_status ON invites(status);
     `)
     console.log('✅ Índices criados')
 
@@ -89,6 +136,20 @@ async function setupDatabase() {
     await pool.query(`
       CREATE TRIGGER update_debts_updated_at
         BEFORE UPDATE ON debts
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    `)
+
+    await pool.query(`
+      CREATE TRIGGER update_groups_updated_at
+        BEFORE UPDATE ON groups
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    `)
+
+    await pool.query(`
+      CREATE TRIGGER update_invites_updated_at
+        BEFORE UPDATE ON invites
         FOR EACH ROW
         EXECUTE FUNCTION update_updated_at_column();
     `)

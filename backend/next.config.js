@@ -1,11 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configurações específicas para API
-  experimental: {
-    // Permitir apenas API routes
-    appDir: false
-  },
-  
   // CORS para permitir acesso do frontend
   async headers() {
     return [
