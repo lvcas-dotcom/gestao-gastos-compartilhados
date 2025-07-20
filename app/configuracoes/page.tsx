@@ -138,12 +138,6 @@ export default function ConfiguracoesPage() {
               <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-purple-500 to-violet-500 rounded-full flex items-center justify-center mx-auto mb-4 xs:mb-6 shadow-lg shadow-purple-500/30">
                 <Settings className="h-8 w-8 xs:h-10 xs:w-10 text-white animate-spin" />
               </div>
-              <h1 className="text-xl xs:text-2xl font-code-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent mb-2 xs:mb-3">
-                Carregando Configurações...
-              </h1>
-              <p className="text-gray-600 text-sm xs:text-base leading-relaxed mb-4 xs:mb-6">
-                Aguarde enquanto carregamos suas informações
-              </p>
               <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
             </CardContent>
           </Card>
@@ -218,13 +212,19 @@ export default function ConfiguracoesPage() {
               />
             </div>
 
-            <Button 
-              onClick={handleSave} 
+                        <Button 
+              type="submit" 
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 hover:from-purple-700 hover:via-violet-700 hover:to-blue-700 text-white shadow-xl shadow-purple-500/30"
+              className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white shadow-lg shadow-purple-500/30"
             >
-              <Save className="mr-2 h-4 w-4" />
-              {isLoading ? "Salvando..." : "Salvar Alterações"}
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Salvar Alterações
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
