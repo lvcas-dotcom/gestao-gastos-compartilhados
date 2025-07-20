@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { UserPlus, Mail, User, CheckCircle, Users, Sparkles, AlertCircle, Clock } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
 import Image from "next/image"
+import { API_ENDPOINTS } from "@/lib/api"
 
 interface Invite {
   id: string
@@ -46,7 +47,20 @@ export default function AcceptInvitePage() {
     setIsValidating(true)
 
     try {
-      // Simular delay de validação
+      // Tentar validar convite via API primeiro
+      const response = await fetch(`${API_ENDPOINTS.INVITES.VALIDATE}/${inviteId}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setInvite(data.data.invite)
+          setGroup(data.data.group)
+          setIsValidating(false)
+          return
+        }
+      }
+
+      // Fallback para localStorage (desenvolvimento)
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Buscar convite nos dados salvos
@@ -123,17 +137,6 @@ export default function AcceptInvitePage() {
       newErrors.email = "E-mail inválido"
     }
 
-    // Verificar se o email já existe no grupo
-    const user1Data = localStorage.getItem("user1")
-    const user2Data = localStorage.getItem("user2")
-
-    if (user1Data && JSON.parse(user1Data).email === formData.email) {
-      newErrors.email = "Este e-mail já está sendo usado no grupo"
-    }
-    if (user2Data && JSON.parse(user2Data).email === formData.email) {
-      newErrors.email = "Este e-mail já está sendo usado no grupo"
-    }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -148,46 +151,83 @@ export default function AcceptInvitePage() {
     setIsLoading(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Tentar aceitar convite via API
+      const response = await fetch(`${API_ENDPOINTS.INVITES.ACCEPT}/${inviteId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+        }),
+      })
 
-      // Criar novo usuário
-      const newUserId = `user_${Date.now()}`
-      const newUserData = {
-        id: newUserId,
-        name: formData.name,
-        email: formData.email,
-        joinedViaInvite: invite.id,
-        createdAt: new Date().toISOString(),
-      }
+      const data = await response.json()
 
-      // Salvar novo usuário (em um app real, isso seria no backend)
-      localStorage.setItem(`user_${newUserId}`, JSON.stringify(newUserData))
-
-      // Atualizar o convite (incrementar uso)
-      const savedInvites = localStorage.getItem("invites")
-      if (savedInvites) {
-        const invites: Invite[] = JSON.parse(savedInvites)
-        const updatedInvites = invites.map((inv) =>
-          inv.id === invite.id ? { ...inv, currentUses: inv.currentUses + 1 } : inv,
-        )
-        localStorage.setItem("invites", JSON.stringify(updatedInvites))
-      }
-
-      // Atualizar grupo para incluir novo membro
-      if (group) {
-        const updatedGroup = {
-          ...group,
-          users: [...group.users, newUserId],
-          updatedAt: new Date().toISOString(),
+      if (!response.ok) {
+        if (response.status === 409) {
+          setErrors({ email: 'Este email já está sendo usado' })
+        } else {
+          setErrors({ general: data.message || 'Erro ao aceitar convite' })
         }
-        localStorage.setItem("group", JSON.stringify(updatedGroup))
+        return
       }
 
-      // Redirecionar para uma página de sucesso ou dashboard
-      alert("Parabéns! Você entrou no grupo com sucesso!")
-      router.push("/dashboard")
+      // Sucesso - mostrar mensagem com senha temporária se fornecida
+      if (data.data.tempPassword) {
+        alert(`✅ Parabéns! Você entrou no grupo com sucesso!\n\n🔐 Sua senha temporária é: ${data.data.tempPassword}\n\nGuarde essa informação para fazer login!`)
+      } else {
+        alert("✅ Parabéns! Você entrou no grupo com sucesso!")
+      }
+      
+      router.push("/login")
+
     } catch (error) {
-      alert("Erro ao entrar no grupo. Tente novamente.")
+      console.error('Erro na requisição:', error)
+      
+      // Fallback para sistema local
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+
+        // Criar novo usuário
+        const newUserId = `user_${Date.now()}`
+        const newUserData = {
+          id: newUserId,
+          name: formData.name,
+          email: formData.email,
+          joinedViaInvite: invite.id,
+          createdAt: new Date().toISOString(),
+        }
+
+        // Salvar novo usuário (em um app real, isso seria no backend)
+        localStorage.setItem(`user_${newUserId}`, JSON.stringify(newUserData))
+
+        // Atualizar o convite (incrementar uso)
+        const savedInvites = localStorage.getItem("invites")
+        if (savedInvites) {
+          const invites: Invite[] = JSON.parse(savedInvites)
+          const updatedInvites = invites.map((inv) =>
+            inv.id === invite.id ? { ...inv, currentUses: inv.currentUses + 1 } : inv,
+          )
+          localStorage.setItem("invites", JSON.stringify(updatedInvites))
+        }
+
+        // Atualizar grupo para incluir novo membro
+        if (group) {
+          const updatedGroup = {
+            ...group,
+            users: [...(group.users || []), newUserId],
+            updatedAt: new Date().toISOString(),
+          }
+          localStorage.setItem("group", JSON.stringify(updatedGroup))
+        }
+
+        alert("✅ Parabéns! Você entrou no grupo com sucesso!")
+        router.push("/dashboard")
+      } catch (fallbackError) {
+        setErrors({ general: 'Erro de conexão. Tente novamente.' })
+      }
     } finally {
       setIsLoading(false)
     }
@@ -398,6 +438,16 @@ export default function AcceptInvitePage() {
                   </div>
                 </div>
               </div>
+
+              {/* Erro geral */}
+              {errors.general && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl animate-in slide-in-from-left-2">
+                  <p className="text-red-600 text-sm font-medium flex items-center">
+                    <span className="w-2 h-2 bg-red-500 rounded-full mr-2" />
+                    {errors.general}
+                  </p>
+                </div>
+              )}
 
               {/* Submit Button */}
               <Button

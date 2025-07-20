@@ -441,6 +441,174 @@ app.delete('/api/user/delete', async (req, res) => {
   }
 })
 
+// ======= ENDPOINTS DE CONVITES =======
+
+// Criar convite
+app.post('/api/invites', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token de autorização obrigatório'
+      })
+    }
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET)
+      const { groupId, maxUses = 5, expiresIn = 7 } = req.body
+
+      // Calcular data de expiração
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + expiresIn)
+
+      // Gerar ID do convite
+      const inviteId = 'invite_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+
+      // Por enquanto, simular salvamento (em produção seria no banco)
+      const mockInvite = {
+        id: inviteId,
+        groupId: groupId || 'group_default',
+        createdBy: decoded.userId,
+        expiresAt: expiresAt.toISOString(),
+        maxUses: parseInt(maxUses),
+        currentUses: 0,
+        status: 'active',
+        createdAt: new Date().toISOString()
+      }
+
+      res.json({
+        success: true,
+        message: 'Convite criado com sucesso',
+        data: { invite: mockInvite }
+      })
+
+    } catch (jwtError) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token inválido'
+      })
+    }
+
+  } catch (error) {
+    console.error('Erro ao criar convite:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    })
+  }
+})
+
+// Validar convite
+app.get('/api/invites/validate/:inviteId', async (req, res) => {
+  try {
+    const { inviteId } = req.params
+
+    // Por enquanto, simular validação (em produção seria consulta no banco)
+    // Retornar convite válido para teste
+    const mockInvite = {
+      id: inviteId,
+      groupId: 'group_default',
+      createdBy: 'user_1',
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 dias
+      maxUses: 5,
+      currentUses: 0,
+      status: 'active',
+      createdAt: new Date().toISOString()
+    }
+
+    const mockGroup = {
+      id: 'group_default',
+      name: 'Grupo Exemplo',
+      photo: null,
+      numberOfPeople: 5
+    }
+
+    res.json({
+      success: true,
+      data: { 
+        invite: mockInvite,
+        group: mockGroup
+      }
+    })
+
+  } catch (error) {
+    console.error('Erro ao validar convite:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    })
+  }
+})
+
+// Aceitar convite
+app.post('/api/invites/accept/:inviteId', async (req, res) => {
+  try {
+    const { inviteId } = req.params
+    const { name, email } = req.body
+
+    if (!name || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nome e email são obrigatórios'
+      })
+    }
+
+    const client = new Client(dbConfig)
+    await client.connect()
+
+    try {
+      // Verificar se o email já existe
+      const existingUser = await client.query(
+        'SELECT id FROM users WHERE email = $1',
+        [email]
+      )
+
+      if (existingUser.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'Este email já está sendo usado'
+        })
+      }
+
+      // Gerar hash da senha padrão ou permitir usuário definir
+      const defaultPassword = Math.random().toString(36).slice(-8) // Senha aleatória
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10)
+
+      // Criar novo usuário
+      const userResult = await client.query(
+        'INSERT INTO users (name, email, password, joined_via_invite) VALUES ($1, $2, $3, $4) RETURNING id, name, email',
+        [name, email, hashedPassword, inviteId]
+      )
+
+      const newUser = userResult.rows[0]
+
+      // Simular incrementar uso do convite (em produção seria atualização no banco)
+      
+      res.json({
+        success: true,
+        message: 'Usuário adicionado ao grupo com sucesso!',
+        data: { 
+          user: newUser,
+          tempPassword: defaultPassword, // Em produção, enviaria por email
+          inviteId: inviteId
+        }
+      })
+
+    } finally {
+      await client.end()
+    }
+
+  } catch (error) {
+    console.error('Erro ao aceitar convite:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    })
+  }
+})
+
 app.listen(port, () => {
   console.log(`🚀 Servidor backend rodando na porta ${port}`)
   console.log(`📡 Acesse: http://localhost:${port}`)

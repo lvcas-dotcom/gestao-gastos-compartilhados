@@ -208,7 +208,7 @@ export default function ConvitesPage() {
         body: JSON.stringify({
           groupId: group.id,
           maxUses: Number.parseInt(formData.maxUses),
-          expiresInDays: Number.parseInt(formData.expiresIn)
+          expiresIn: Number.parseInt(formData.expiresIn)
         })
       })
 
@@ -257,7 +257,7 @@ export default function ConvitesPage() {
 
   const handleCopyInviteLink = (inviteId: string) => {
     // Usar a URL correta do frontend
-    const inviteUrl = `http://localhost:3000/convite/${inviteId}`
+    const inviteUrl = generateInviteLink(inviteId)
     navigator.clipboard.writeText(inviteUrl)
     setCopiedId(inviteId)
     setTimeout(() => setCopiedId(""), 2000)

@@ -17,6 +17,8 @@ export const API_ENDPOINTS = {
   INVITES: {
     LIST: `${API_BASE_URL}/api/invites`,
     CREATE: `${API_BASE_URL}/api/invites`,
+    VALIDATE: `${API_BASE_URL}/api/invites/validate`,
+    ACCEPT: `${API_BASE_URL}/api/invites/accept`,
   }
 }
 
