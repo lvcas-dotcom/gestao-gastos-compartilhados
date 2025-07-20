@@ -383,11 +383,19 @@ export default function DashboardPage() {
         </Card>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-3 gap-2 xs:gap-3">
+        <div className="grid grid-cols-2 gap-2 xs:gap-3">
           <Link href="/gastos">
             <Button className="w-full h-10 xs:h-12 sm:h-14 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 hover:from-purple-700 hover:via-violet-700 hover:to-blue-700 text-white shadow-lg xs:shadow-xl shadow-purple-500/30 rounded-lg xs:rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] hover:shadow-xl xs:hover:shadow-2xl hover:shadow-purple-500/40 group text-xs xs:text-sm">
               <Plus className="mr-1 h-3 w-3 xs:h-4 xs:w-4" />
-              <span>Gasto</span>
+              <span>Novo Gasto</span>
+            </Button>
+          </Link>
+          <Link href="/criar-grupo">
+            <Button 
+              className="w-full h-10 xs:h-12 sm:h-14 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 text-white shadow-lg xs:shadow-xl shadow-green-500/30 rounded-lg xs:rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] hover:shadow-xl xs:hover:shadow-2xl hover:shadow-green-500/40 group text-xs xs:text-sm"
+            >
+              <Users className="mr-1 h-3 w-3 xs:h-4 xs:w-4" />
+              <span>Criar Grupo</span>
             </Button>
           </Link>
           <Link href="/divida">

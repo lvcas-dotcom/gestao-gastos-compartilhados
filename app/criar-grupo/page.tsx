@@ -7,13 +7,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Camera, ArrowRight, Sparkles, Upload, X } from "lucide-react"
+import { Users, Camera, ArrowRight, Sparkles, Upload, X, ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import Image from "next/image"
 import { API_ENDPOINTS } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function ConfigurarGrupo() {
   const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     groupName: "",
@@ -144,6 +147,25 @@ export default function ConfigurarGrupo() {
       </div>
 
       <div className="relative z-10 px-3 xs:px-4 sm:px-6 md:px-8 lg:px-12 py-3 xs:py-4 sm:py-6 max-w-sm xs:max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto">
+        {/* Header for logged in users */}
+        {user && (
+          <div className="flex items-center justify-between mb-4 xs:mb-6">
+            <Link href="/dashboard">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-all duration-200"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar ao Dashboard
+              </Button>
+            </Link>
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Olá, <span className="font-semibold text-purple-600">{user.name}</span></p>
+            </div>
+          </div>
+        )}
+
         {/* Welcome Section */}
         <div className="text-center mb-6 xs:mb-8">
           <div className="relative w-24 h-24 xs:w-32 xs:h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 flex items-center justify-center mx-auto mb-2 xs:mb-3 transform hover:scale-105 transition-transform duration-300">
@@ -156,10 +178,13 @@ export default function ConfigurarGrupo() {
             />
           </div>
           <h1 className="text-xl xs:text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-700 via-violet-700 to-blue-700 bg-clip-text text-transparent mb-2 xs:mb-3">
-            Configurar Grupo
+            {user ? 'Criar Novo Grupo' : 'Configurar Grupo'}
           </h1>
           <p className="text-gray-600 text-sm xs:text-base sm:text-lg leading-relaxed px-2 xs:px-4">
-            Defina o nome do seu grupo e quantas pessoas participarão dos gastos compartilhados
+            {user 
+              ? 'Crie um novo grupo para compartilhar gastos com outras pessoas'
+              : 'Defina o nome do seu grupo e quantas pessoas participarão dos gastos compartilhados'
+            }
           </p>
         </div>
 
@@ -304,27 +329,33 @@ export default function ConfigurarGrupo() {
                 {isLoading ? (
                   <div className="flex items-center gap-2 xs:gap-3">
                     <div className="w-4 h-4 xs:w-5 xs:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm xs:text-base">Criando grupo...</span>
+                    <span className="text-sm xs:text-base">
+                      {user ? 'Criando grupo...' : 'Configurando...'}
+                    </span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 xs:gap-3">
-                    <span className="text-sm xs:text-base">Criar Grupo</span>
+                    <span className="text-sm xs:text-base">
+                      {user ? 'Criar Grupo' : 'Continuar'}
+                    </span>
                     <ArrowRight className="h-4 w-4 xs:h-5 xs:w-5" />
                   </div>
                 )}
               </Button>
 
-              {/* Skip Button */}
-              <div className="text-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleSkip}
-                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 font-medium text-sm xs:text-base"
-                >
-                  Pular etapa (tenho link de convite)
-                </Button>
-              </div>
+              {/* Skip Button - Only show for non-logged users */}
+              {!user && (
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleSkip}
+                    className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 font-medium text-sm xs:text-base"
+                  >
+                    Pular etapa (tenho link de convite)
+                  </Button>
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>
@@ -336,10 +367,20 @@ export default function ConfigurarGrupo() {
               <Sparkles className="h-2 w-2 xs:h-3 xs:w-3 text-purple-600" />
             </div>
             <div>
-              <h4 className="font-medium text-purple-800 mb-1 text-sm xs:text-base">Duas opções disponíveis</h4>
+              <h4 className="font-medium text-purple-800 mb-1 text-sm xs:text-base">
+                {user ? 'Como funciona?' : 'Duas opções disponíveis'}
+              </h4>
               <p className="text-xs xs:text-sm text-purple-700 leading-relaxed">
-                <strong>Criar grupo:</strong> Configure seu grupo e convide outros membros.<br/>
-                <strong>Pular etapa:</strong> Use se já tem um link de convite para entrar em um grupo existente.
+                {user ? (
+                  <>
+                    <strong>Crie um grupo:</strong> Defina nome, foto e número de pessoas. Depois convide seus amigos através da página de convites.
+                  </>
+                ) : (
+                  <>
+                    <strong>Criar grupo:</strong> Configure seu grupo e convide outros membros.<br/>
+                    <strong>Pular etapa:</strong> Use se já tem um link de convite para entrar em um grupo existente.
+                  </>
+                )}
               </p>
             </div>
           </div>
