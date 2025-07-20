@@ -42,7 +42,6 @@ export function useAuth() {
   }
 
   useEffect(() => {
-    useEffect(() => {
     const checkAuth = async () => {
       try {
         const storedAuth = localStorage.getItem('auth')
@@ -83,7 +82,6 @@ export function useAuth() {
     }
 
     checkAuth()
-  }, [pathname, router])
   }, [pathname, router])
 
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {

@@ -136,7 +136,7 @@ export default function ConfigurarGrupo() {
       <div className="relative z-10 px-3 xs:px-4 sm:px-6 md:px-8 lg:px-12 py-3 xs:py-4 sm:py-6 max-w-sm xs:max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto">
         {/* Welcome Section */}
         <div className="text-center mb-6 xs:mb-8">
-          <div className="relative w-24 h-24 xs:w-32 xs:h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 flex items-center justify-center mx-auto mb-4 xs:mb-6 transform hover:scale-105 transition-transform duration-300">
+          <div className="relative w-24 h-24 xs:w-32 xs:h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 flex items-center justify-center mx-auto mb-2 xs:mb-3 transform hover:scale-105 transition-transform duration-300">
             <Image
               src="/logo.png"
               alt="Logo Controle de Gastos"
