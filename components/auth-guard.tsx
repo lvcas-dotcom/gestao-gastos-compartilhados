@@ -2,28 +2,27 @@
 
 import { useAuth } from "@/hooks/useAuth"
 import { usePathname } from "next/navigation"
-import { Loader2 } from "lucide-react"
 
 interface AuthGuardProps {
   children: React.ReactNode
 }
 
 export default function AuthGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { user, isLoading } = useAuth()
   const pathname = usePathname()
   
   // Páginas que não precisam de autenticação
   const publicPages = ["/login", "/cadastro", "/"]
   const isPublicPage = publicPages.includes(pathname)
   
+  // Derivar isAuthenticated do user
+  const isAuthenticated = !!user
+  
   // Se estiver carregando, mostrar loader
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Verificando autenticação...</p>
-        </div>
+        <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -33,13 +32,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     return <>{children}</>
   }
   
-  // Se não autenticado em página privada, o hook já faz o redirect
+  // Se não autenticado em página privada, o hook já fez o redirect
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Redirecionando...</p>
-      </div>
+      <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 }

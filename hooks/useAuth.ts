@@ -44,26 +44,32 @@ export function useAuth() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const storedAuth = localStorage.getItem('auth')
-        const storedExpiration = localStorage.getItem('authExpiration')
         const token = localStorage.getItem('token')
         
-        if (storedAuth && storedExpiration && token) {
-          const expirationTime = parseInt(storedExpiration)
-          if (Date.now() < expirationTime) {
-            const authData = JSON.parse(storedAuth)
+        if (token) {
+          // Verificar se o token é válido com a API
+          const response = await fetch('http://localhost:3001/api/auth/verify', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          })
+
+          if (response.ok) {
+            const data = await response.json()
             
             // Verificar grupos do usuário via API
             const hasGroups = await checkUserGroups(token)
             
             setUser({
-              id: authData.id,
-              name: authData.name,
-              email: authData.email,
-              userGroup: authData.userGroup,
+              id: data.user.id,
+              name: data.user.name,
+              email: data.user.email,
+              userGroup: data.user.user_group,
               hasGroups: hasGroups
             })
           } else {
+            // Token inválido
             logout()
           }
         } else {
@@ -86,26 +92,36 @@ export function useAuth() {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
     try {
-      const user = UserManager.validateCredentials(email, password)
-      
-      if (user) {
+      const response = await fetch('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.data && data.data.token) {
+        // Login bem-sucedido
         const authUser: AuthUser = {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          userGroup: user.userGroup
+          id: data.data.user.id,
+          name: data.data.user.name,
+          email: data.data.user.email,
+          userGroup: data.data.user.user_group
         }
         
         setUser(authUser)
         
-        // Salvar no localStorage com expiração de 24 horas
-        const expirationTime = Date.now() + (24 * 60 * 60 * 1000)
-        localStorage.setItem('auth', JSON.stringify(authUser))
-        localStorage.setItem('authExpiration', expirationTime.toString())
-        localStorage.setItem('userGroup', user.userGroup || '')
+        // Salvar token
+        localStorage.setItem('token', data.data.token)
+        localStorage.setItem('user', JSON.stringify(data.data.user))
         
         // Navegar baseado no status do usuário
-        if (user.userGroup) {
+        if (data.data.user.user_group) {
           router.push('/dashboard')
         } else {
           router.push('/criar-grupo')
@@ -114,7 +130,7 @@ export function useAuth() {
         return { success: true, message: 'Login realizado com sucesso!' }
       }
       
-      return { success: false, message: 'E-mail ou senha incorretos.' }
+      return { success: false, message: data.message || 'E-mail ou senha incorretos.' }
     } catch (error) {
       console.error('Erro no login:', error)
       return { success: false, message: 'Erro interno. Tente novamente.' }
@@ -135,7 +151,9 @@ export function useAuth() {
       'membros',
       'categorias',
       'currentUser',
-      'userData'
+      'userData',
+      'token',
+      'user'
     ]
     
     keysToRemove.forEach(key => localStorage.removeItem(key))

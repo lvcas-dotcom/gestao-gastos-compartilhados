@@ -61,29 +61,38 @@ export default function ConfigurarGrupo() {
     setIsLoading(true)
 
     try {
-      // Usar UserManager para criar o grupo
-      const UserManager = (await import('@/lib/userManager')).default
-      const authData = localStorage.getItem('auth')
+      const token = localStorage.getItem('token')
       
-      if (authData) {
-        const user = JSON.parse(authData)
-        const result = UserManager.createGroup(formData.groupName, user.id)
+      if (!token) {
+        router.push('/login')
+        return
+      }
+
+      const response = await fetch('http://localhost:3001/api/groups/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          groupName: formData.groupName,
+          numberOfPeople: formData.numberOfPeople
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Salvar configuração do grupo
+        localStorage.setItem("groupConfig", JSON.stringify(formData))
         
-        if (result.success) {
-          // Atualizar dados locais
-          user.userGroup = result.group?.id
-          localStorage.setItem('auth', JSON.stringify(user))
-          localStorage.setItem('userGroup', result.group?.id || '')
-          localStorage.setItem("groupConfig", JSON.stringify(formData))
-          
-          // Simular criação
-          await new Promise((resolve) => setTimeout(resolve, 1500))
-          
-          // Redirecionar para dashboard
-          router.push("/dashboard")
-        } else {
-          alert(result.message)
-        }
+        // Simular delay de criação
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+        
+        // Redirecionar para dashboard
+        router.push("/dashboard")
+      } else {
+        alert(data.message || 'Erro ao criar grupo')
       }
     } catch (error) {
       console.error("Erro ao criar grupo:", error)

@@ -9,7 +9,6 @@ import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Settings, User, Bell, Shield, LogOut, Trash2, Save, ArrowLeft } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
-import UserManager from "@/lib/userManager"
 import Link from "next/link"
 
 export default function ConfiguracoesPage() {
@@ -39,16 +38,32 @@ export default function ConfiguracoesPage() {
 
     setIsLoading(true)
     try {
-      const result = UserManager.updateUser(user.id, {
-        name: userData.name,
-        email: userData.email,
+      const token = localStorage.getItem('token')
+      
+      if (!token) {
+        alert('Token de autenticação não encontrado')
+        return
+      }
+
+      const response = await fetch('http://localhost:3001/api/user/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: userData.name,
+          email: userData.email
+        }),
       })
 
-      if (result.success) {
+      const data = await response.json()
+
+      if (response.ok && data.success) {
         updateUser({ name: userData.name, email: userData.email })
         alert("Configurações salvas com sucesso!")
       } else {
-        alert(result.message)
+        alert(data.message || 'Erro ao salvar configurações')
       }
     } catch (error) {
       console.error("Erro ao salvar:", error)
@@ -63,12 +78,27 @@ export default function ConfiguracoesPage() {
 
     if (showDeleteConfirm) {
       try {
-        const result = UserManager.deleteUser(user.id)
-        if (result.success) {
+        const token = localStorage.getItem('token')
+        
+        if (!token) {
+          alert('Token de autenticação não encontrado')
+          return
+        }
+
+        const response = await fetch('http://localhost:3001/api/user/delete', {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        const data = await response.json()
+
+        if (response.ok && data.success) {
           alert("Conta excluída com sucesso!")
           logout()
         } else {
-          alert(result.message)
+          alert(data.message || 'Erro ao excluir conta')
         }
       } catch (error) {
         console.error("Erro ao excluir conta:", error)
@@ -84,10 +114,10 @@ export default function ConfiguracoesPage() {
     if (!user) return
 
     if (confirm("Tem certeza que deseja sair do grupo? Esta ação não pode ser desfeita.")) {
-      // Atualizar o usuário removendo o grupo
-      UserManager.updateUser(user.id, { userGroup: undefined })
+      // Por enquanto, apenas simular a saída do grupo
+      // Em uma implementação real, você faria uma chamada para a API
       updateUser({ userGroup: undefined })
-      localStorage.removeItem('userGroup')
+      localStorage.removeItem('groupConfig')
       alert("Você saiu do grupo com sucesso!")
     }
   }

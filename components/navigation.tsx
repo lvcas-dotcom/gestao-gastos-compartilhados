@@ -35,10 +35,10 @@ export function Navigation() {
                 className="object-contain w-8 h-8 xs:w-10 xs:h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14"
               />
             </div>
-            <span className="font-bold text-gray-800 text-sm xs:text-base sm:text-lg lg:text-xl hidden xs:block pb-2">
+            <span className="font-code-bold text-gray-800 text-sm xs:text-base sm:text-lg lg:text-xl hidden xs:block pb-2">
               Controle de Gastos
             </span>
-            <span className="font-bold text-gray-800 text-xs block xs:hidden pb-2">CG</span>
+            <span className="font-code-bold text-gray-800 text-xs block xs:hidden pb-2">CG</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -50,7 +50,7 @@ export function Navigation() {
                 <Link key={item.href} href={item.href}>
                   <Button
                     variant={isActive ? "default" : "ghost"}
-                    className={`flex items-center space-x-2 text-sm lg:text-base px-3 lg:px-4 py-2 ${
+                    className={`flex items-center space-x-2 text-sm lg:text-base px-3 lg:px-4 py-2 font-code-bold ${
                       isActive ? "bg-purple-600 text-white hover:bg-purple-700" : "text-gray-700 hover:bg-purple-50"
                     }`}
                   >
@@ -96,7 +96,7 @@ export function Navigation() {
                       <Link key={item.href} href={item.href} onClick={() => setIsOpen(false)}>
                         <Button
                           variant={isActive ? "default" : "ghost"}
-                          className={`w-full justify-start space-x-3 h-12 text-base ${
+                          className={`w-full justify-start space-x-3 h-12 text-base font-code-bold ${
                             isActive
                               ? "bg-purple-600 text-white hover:bg-purple-700"
                               : "text-gray-700 hover:bg-purple-50"
@@ -130,7 +130,7 @@ export function Navigation() {
                       <Link key={item.href} href={item.href} onClick={() => setIsOpen(false)}>
                         <Button
                           variant={isActive ? "default" : "ghost"}
-                          className={`w-full justify-start space-x-2 xs:space-x-3 h-10 xs:h-12 text-sm xs:text-base ${
+                          className={`w-full justify-start space-x-2 xs:space-x-3 h-10 xs:h-12 text-sm xs:text-base font-code-bold ${
                             isActive
                               ? "bg-purple-600 text-white hover:bg-purple-700"
                               : "text-gray-700 hover:bg-purple-50"
@@ -147,7 +147,7 @@ export function Navigation() {
                       <Link href="/login" onClick={() => setIsOpen(false)}>
                         <Button
                           variant="ghost"
-                          className="w-full justify-start space-x-2 xs:space-x-3 h-10 xs:h-12 text-sm xs:text-base text-gray-700 hover:bg-purple-50"
+                          className="w-full justify-start space-x-2 xs:space-x-3 h-10 xs:h-12 text-sm xs:text-base font-code-bold text-gray-700 hover:bg-purple-50"
                         >
                           <LogIn className="h-4 w-4 xs:h-5 xs:w-5" />
                           <span>Entrar</span>
@@ -156,7 +156,7 @@ export function Navigation() {
                       <Link href="/cadastro" onClick={() => setIsOpen(false)}>
                         <Button
                           variant="default"
-                          className="w-full justify-start space-x-2 xs:space-x-3 h-10 xs:h-12 text-sm xs:text-base bg-purple-600 text-white hover:bg-purple-700"
+                          className="w-full justify-start space-x-2 xs:space-x-3 h-10 xs:h-12 text-sm xs:text-base font-code-bold bg-purple-600 text-white hover:bg-purple-700"
                         >
                           <UserPlus className="h-4 w-4 xs:h-5 xs:w-5" />
                           <span>Criar Conta</span>

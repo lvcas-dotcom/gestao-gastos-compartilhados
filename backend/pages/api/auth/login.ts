@@ -1,7 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { db } from '@/lib/supabase'
-import { verifyPassword, generateToken } from '@/lib/auth'
-import { loginSchema } from '@/lib/validations'
+import { Client } from 'pg'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'seu-jwt-secret-super-secreto'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -12,64 +14,81 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Validar dados de entrada
-    const validationResult = loginSchema.safeParse(req.body)
-    
-    if (!validationResult.success) {
+    const { email, password } = req.body
+
+    // Validações básicas
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Dados inválidos',
-        errors: validationResult.error.errors
+        message: 'Email e senha são obrigatórios'
       })
     }
 
-    const { email, password } = validationResult.data
-
-    // Buscar usuário por email
-    const user = await db.user.findUnique({
-      where: { email }
+    // Conectar ao banco
+    const client = new Client({
+      connectionString: 'postgresql://postgres:oskunks@db.oajsszzpeuhxbarwpbdn.supabase.co:5432/postgres'
     })
+    
+    await client.connect()
 
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email ou senha incorretos'
-      })
-    }
+    try {
+      // Buscar usuário por email
+      const userResult = await client.query(
+        'SELECT id, name, email, password_hash, user_group FROM users WHERE email = $1',
+        [email]
+      )
 
-    // Verificar senha
-    const isPasswordValid = await verifyPassword(password, user.password)
-
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email ou senha incorretos'
-      })
-    }
-
-    // Gerar token JWT
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      name: user.name
-    })
-
-    return res.status(200).json({
-      success: true,
-      message: 'Login realizado com sucesso',
-      data: {
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email
-        },
-        token
+      if (userResult.rows.length === 0) {
+        return res.status(401).json({
+          success: false,
+          message: 'Email ou senha incorretos'
+        })
       }
-    })
+
+      const user = userResult.rows[0]
+
+      // Verificar senha
+      const passwordMatch = await bcrypt.compare(password, user.password_hash)
+      
+      if (!passwordMatch) {
+        return res.status(401).json({
+          success: false,
+          message: 'Email ou senha incorretos'
+        })
+      }
+
+      // Gerar JWT token
+      const token = jwt.sign(
+        { 
+          userId: user.id, 
+          email: user.email 
+        },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      )
+
+      // Retornar dados do usuário (sem a senha)
+      res.status(200).json({
+        success: true,
+        message: 'Login realizado com sucesso',
+        data: {
+          token,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            user_group: user.user_group
+          }
+        }
+      })
+
+    } finally {
+      await client.end()
+    }
 
   } catch (error) {
     console.error('Erro no login:', error)
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
     })

@@ -144,13 +144,13 @@ export default function CadastroPage() {
               <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-purple-500 to-violet-500 rounded-full flex items-center justify-center mx-auto mb-4 xs:mb-6 shadow-lg shadow-purple-500/30">
                 <CheckCircle className="h-8 w-8 xs:h-10 xs:w-10 text-white" />
               </div>
-              <h1 className="text-xl xs:text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent mb-2 xs:mb-3">
+              <h1 className="text-xl xs:text-2xl font-code-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent mb-2 xs:mb-3">
                 Conta Criada com Sucesso!
               </h1>
               <p className="text-gray-600 text-sm xs:text-base leading-relaxed mb-4 xs:mb-6">
                 Sua conta foi criada com sucesso. Você será redirecionado para a página de login em instantes.
               </p>
-              <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin mx-auto" />
+              <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin mx-auto" />
             </CardContent>
           </Card>
         </div>
@@ -179,7 +179,7 @@ export default function CadastroPage() {
               className="object-contain drop-shadow-lg w-20 h-20 xs:w-28 xs:h-28 sm:w-36 sm:h-36 md:w-44 md:h-44"
             />
           </div>
-          <h1 className="text-xl xs:text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-700 via-violet-700 to-blue-700 bg-clip-text text-transparent mb-2 xs:mb-3">
+          <h1 className="text-xl xs:text-2xl sm:text-3xl md:text-4xl font-code-bold bg-gradient-to-r from-purple-700 via-violet-700 to-blue-700 bg-clip-text text-transparent mb-2 xs:mb-3">
             Criar Nova Conta
           </h1>
           <p className="text-gray-600 text-sm xs:text-base sm:text-lg leading-relaxed px-2 xs:px-4">
@@ -373,13 +373,10 @@ export default function CadastroPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-10 xs:h-12 sm:h-14 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 hover:from-purple-700 hover:via-violet-700 hover:to-blue-700 text-white font-semibold text-sm xs:text-base shadow-xl shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg xs:rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] hover:shadow-2xl hover:shadow-purple-500/40"
+                className="w-full h-10 xs:h-12 sm:h-14 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 hover:from-purple-700 hover:via-violet-700 hover:to-blue-700 text-white font-code-bold text-sm xs:text-base shadow-xl shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg xs:rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] hover:shadow-2xl hover:shadow-purple-500/40"
               >
                 {isLoading ? (
-                  <div className="flex items-center gap-2 xs:gap-3">
-                    <div className="w-4 h-4 xs:w-5 xs:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm xs:text-base">Criando conta...</span>
-                  </div>
+                  <div className="w-4 h-4 xs:w-5 xs:h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
                   <div className="flex items-center gap-2 xs:gap-3">
                     <UserPlus className="h-4 w-4 xs:h-5 xs:w-5" />

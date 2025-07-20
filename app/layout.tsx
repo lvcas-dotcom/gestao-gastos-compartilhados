@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Source_Code_Pro } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
@@ -9,6 +9,12 @@ import { AppInitializer } from "@/components/app-initializer"
 const inter = Inter({ 
   subsets: ["latin"],
   variable: "--font-inter",
+})
+
+const sourceCodePro = Source_Code_Pro({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-code-bold",
 })
 
 export const metadata: Metadata = {
@@ -89,7 +95,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.variable} font-sans overflow-x-hidden`}>
+      <body className={`${inter.variable} ${sourceCodePro.variable} font-sans overflow-x-hidden`}>
         <AppInitializer />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}

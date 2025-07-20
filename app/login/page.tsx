@@ -51,31 +51,42 @@ export default function LoginPage() {
     setErrors({}) // Limpar erros anteriores
 
     try {
-      // Simular delay de login
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      const response = await fetch('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          password: formData.password,
+        }),
+      })
 
-      // Usar UserManager para validar credenciais
-      const UserManager = (await import('@/lib/userManager')).default
-      const user = UserManager.validateCredentials(formData.email, formData.password)
-      
-      if (!user) {
-        setErrors({ email: "E-mail ou senha incorretos. Verifique suas credenciais." })
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setErrors({ email: "E-mail ou senha incorretos. Verifique suas credenciais." })
+        } else if (data.errors) {
+          // Tratar erros de validação do backend
+          const backendErrors: { [key: string]: string } = {}
+          data.errors.forEach((error: any) => {
+            if (error.path && error.path[0]) {
+              backendErrors[error.path[0]] = error.message
+            }
+          })
+          setErrors(backendErrors)
+        } else {
+          setErrors({ general: data.message || 'Erro no login' })
+        }
         return
       }
 
-      // Login bem-sucedido - criar dados da sessão
-      const authUser = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        userGroup: user.userGroup
+      // Login realizado com sucesso
+      if (data.data && data.data.token) {
+        localStorage.setItem('token', data.data.token)
+        localStorage.setItem('user', JSON.stringify(data.data.user))
       }
-      
-      // Salvar no localStorage com expiração de 24 horas
-      const expirationTime = Date.now() + (24 * 60 * 60 * 1000)
-      localStorage.setItem('auth', JSON.stringify(authUser))
-      localStorage.setItem('authExpiration', expirationTime.toString())
-      localStorage.setItem('userGroup', user.userGroup || '')
 
       // Após login bem-sucedido, sempre ir para criar-grupo
       // O usuário pode criar um grupo ou pular se já tiver convite
@@ -117,7 +128,7 @@ export default function LoginPage() {
               className="object-contain drop-shadow-lg w-20 h-20 xs:w-28 xs:h-28 sm:w-36 sm:h-36 md:w-44 md:h-44"
             />
           </div>
-          <h1 className="text-xl xs:text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-700 via-violet-700 to-blue-700 bg-clip-text text-transparent mb-2 xs:mb-3">
+          <h1 className="text-xl xs:text-2xl sm:text-3xl md:text-4xl font-code-bold bg-gradient-to-r from-purple-700 via-violet-700 to-blue-700 bg-clip-text text-transparent mb-2 xs:mb-3">
             Entrar na Conta
           </h1>
           <p className="text-gray-600 text-sm xs:text-base sm:text-lg leading-relaxed px-2 xs:px-4">
@@ -226,13 +237,10 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-10 xs:h-12 sm:h-14 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 hover:from-purple-700 hover:via-violet-700 hover:to-blue-700 text-white font-semibold text-sm xs:text-base shadow-xl shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg xs:rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] hover:shadow-2xl hover:shadow-purple-500/40"
+                className="w-full h-10 xs:h-12 sm:h-14 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600 hover:from-purple-700 hover:via-violet-700 hover:to-blue-700 text-white font-code-bold text-sm xs:text-base shadow-xl shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg xs:rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] hover:shadow-2xl hover:shadow-purple-500/40"
               >
                 {isLoading ? (
-                  <div className="flex items-center gap-2 xs:gap-3">
-                    <div className="w-4 h-4 xs:w-5 xs:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm xs:text-base">Entrando...</span>
-                  </div>
+                  <div className="w-4 h-4 xs:w-5 xs:h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
                   <div className="flex items-center gap-2 xs:gap-3">
                     <LogIn className="h-4 w-4 xs:h-5 xs:w-5" />
