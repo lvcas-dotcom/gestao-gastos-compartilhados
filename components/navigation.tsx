@@ -25,8 +25,8 @@ export function Navigation() {
     <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
       <div className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14 xs:h-16 sm:h-18 lg:h-20">
-          <Link href="/" className="flex items-center space-x-2 xs:space-x-3">
-            <div className="w-10 h-10 xs:w-12 xs:h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 flex items-center justify-center">
+          <Link href="/" className="flex items-end space-x-2 xs:space-x-3 pb-1">
+            <div className="w-10 h-10 xs:w-12 xs:h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 flex items-end justify-center pb-1">
               <Image
                 src="/logo.png"
                 alt="Logo Controle de Gastos"
@@ -35,10 +35,10 @@ export function Navigation() {
                 className="object-contain w-8 h-8 xs:w-10 xs:h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14"
               />
             </div>
-            <span className="font-bold text-gray-800 text-sm xs:text-base sm:text-lg lg:text-xl hidden xs:block">
+            <span className="font-bold text-gray-800 text-sm xs:text-base sm:text-lg lg:text-xl hidden xs:block pb-2">
               Controle de Gastos
             </span>
-            <span className="font-bold text-gray-800 text-xs block xs:hidden">CG</span>
+            <span className="font-bold text-gray-800 text-xs block xs:hidden pb-2">CG</span>
           </Link>
 
           {/* Desktop Navigation */}

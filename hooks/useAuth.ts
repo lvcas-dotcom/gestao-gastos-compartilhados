@@ -123,9 +123,34 @@ export function useAuth() {
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('auth')
-    localStorage.removeItem('authExpiration')
-    localStorage.removeItem('userGroup')
+    
+    // Limpar todas as chaves do localStorage relacionadas ao app
+    const keysToRemove = [
+      'auth',
+      'authExpiration', 
+      'userGroup',
+      'grupos',
+      'gastos',
+      'convites',
+      'membros',
+      'categorias',
+      'currentUser',
+      'userData'
+    ]
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key))
+    
+    // Limpar também qualquer chave que comece com prefixos conhecidos
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('grupo_') || 
+          key.startsWith('gasto_') || 
+          key.startsWith('user_') ||
+          key.startsWith('member_') ||
+          key.startsWith('invite_')) {
+        localStorage.removeItem(key)
+      }
+    })
+    
     router.push('/login')
   }
 
