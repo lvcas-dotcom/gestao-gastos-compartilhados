@@ -37,6 +37,12 @@ export function useAuth() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Verificar se estamos no browser
+        if (typeof window === 'undefined') {
+          setIsLoading(false)
+          return
+        }
+
         const token = localStorage.getItem('token')
         
         if (token) {

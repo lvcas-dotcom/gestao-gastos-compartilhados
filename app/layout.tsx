@@ -55,46 +55,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                function cleanupExtensionInterference() {
-                  // Remove classes injetadas pela extensão ColorZilla
-                  const elementsWithExtensionClass = document.querySelectorAll('[class*="__className_"]');
-                  elementsWithExtensionClass.forEach(el => {
-                    el.classList.forEach(className => {
-                      if (className.includes('__className_')) {
-                        el.classList.remove(className);
-                      }
-                    });
-                  });
-                  
-                  // Remove atributo cz-shortcut-listen se estiver causando problemas
-                  const elementsWithCzAttr = document.querySelectorAll('[cz-shortcut-listen]');
-                  elementsWithCzAttr.forEach(el => {
-                    el.removeAttribute('cz-shortcut-listen');
-                  });
-                }
-                
-                // Execute imediatamente
-                cleanupExtensionInterference();
-                
-                // Execute após o DOM estar pronto
-                if (document.readyState === 'loading') {
-                  document.addEventListener('DOMContentLoaded', cleanupExtensionInterference);
-                } else {
-                  cleanupExtensionInterference();
-                }
-                
-                // Execute periodicamente para limpar interferências contínuas
-                setInterval(cleanupExtensionInterference, 1000);
-              })();
-            `
-          }}
-        />
-      </head>
       <body className={`${inter.variable} ${sourceCodePro.variable} font-sans overflow-x-hidden`}>
         <AppInitializer />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>

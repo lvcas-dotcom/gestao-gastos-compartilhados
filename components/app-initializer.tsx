@@ -4,16 +4,22 @@ import { useEffect } from 'react'
 
 export function AppInitializer() {
   useEffect(() => {
-    // Verificar se é um novo usuário (sem token de autenticação)
-    const authToken = localStorage.getItem('auth')
-    
-    if (!authToken) {
-      // Se não há token, limpar todo o localStorage para garantir um início limpo
-      clearAppStorage()
+    // Verificar se estamos no browser antes de acessar localStorage
+    if (typeof window !== 'undefined') {
+      // Verificar se é um novo usuário (sem token de autenticação)
+      const authToken = localStorage.getItem('auth')
+      
+      if (!authToken) {
+        // Se não há token, limpar todo o localStorage para garantir um início limpo
+        clearAppStorage()
+      }
     }
   }, [])
 
   const clearAppStorage = () => {
+    // Verificar se estamos no browser antes de acessar localStorage
+    if (typeof window === 'undefined') return
+    
     // Lista de chaves conhecidas para remover
     const keysToRemove = [
       'auth',
