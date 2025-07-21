@@ -15,38 +15,22 @@ const supabaseUrl = process.env.SUPABASE_URL || ''
 const supabaseKey = process.env.SUPABASE_ANON_KEY || ''
 const connectionString = process.env.DATABASE_URL || ''
 
-console.log('Environment:', process.env.NODE_ENV)
 console.log('Database URL configured:', !!connectionString)
+console.log('Using mock database for development:', !connectionString)
 
-// Em desenvolvimento local, usar mock se houver problemas de conectividade
-// Em produção, sempre tentar usar o banco real
-const useMock = process.env.NODE_ENV !== 'production' && !connectionString
-
-console.log('Using mock database:', useMock)
+// Se não há connection string, usar mock
+const useMock = !connectionString
 
 let pool: Pool | null = null
 
-// Tentar conectar ao banco se não estiver usando mock
-if (!useMock && connectionString) {
-  try {
-    pool = new Pool({
-      connectionString,
-      ssl: connectionString.includes('supabase') ? { rejectUnauthorized: false } : false,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
-    })
-    
-    // Teste de conexão em produção
-    if (process.env.NODE_ENV === 'production') {
-      pool.query('SELECT 1').catch(err => {
-        console.error('Database connection test failed:', err)
-      })
-    }
-  } catch (error) {
-    console.error('Failed to initialize database pool:', error)
-    pool = null
-  }
+if (!useMock) {
+  pool = new Pool({
+    connectionString,
+    ssl: connectionString.includes('supabase') ? { rejectUnauthorized: false } : false,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+  })
 }
 
 // Cliente Supabase (para funcionalidades futuras) - opcional

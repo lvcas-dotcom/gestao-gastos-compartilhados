@@ -1,28 +1,30 @@
 // Configuração da API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API_BASE_URL = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:3000'  // Desenvolvimento local
+  : process.env.NEXT_PUBLIC_API_URL || ''  // Produção
 
 export const API_ENDPOINTS = {
   AUTH: {
-    LOGIN: `${API_BASE_URL}/api/auth/login`,
-    REGISTER: `${API_BASE_URL}/api/auth/register`,
-    VERIFY: `${API_BASE_URL}/api/auth/verify`,
+    LOGIN: `/api/auth/login`,
+    REGISTER: `/api/auth/register`,
+    VERIFY: `/api/auth/verify`,
   },
   USER: {
-    UPDATE: `${API_BASE_URL}/api/user/update`,
-    DELETE: `${API_BASE_URL}/api/user/delete`,
-    GROUPS: `${API_BASE_URL}/api/user/groups`,
+    UPDATE: `/api/user/update`,
+    DELETE: `/api/user/delete`,
+    GROUPS: `/api/user/groups`,
   },
   GROUPS: {
-    CREATE: `${API_BASE_URL}/api/groups`,
-    LIST: `${API_BASE_URL}/api/groups`,
-    UPDATE: `${API_BASE_URL}/api/groups`,
-    DELETE: `${API_BASE_URL}/api/groups`,
+    CREATE: `/api/groups`,
+    LIST: `/api/groups`,
+    UPDATE: `/api/groups`,
+    DELETE: `/api/groups`,
   },
   INVITES: {
-    LIST: `${API_BASE_URL}/api/invites`,
-    CREATE: `${API_BASE_URL}/api/invites`,
-    VALIDATE: `${API_BASE_URL}/api/invites/validate`,
-    ACCEPT: `${API_BASE_URL}/api/invites/accept`,
+    LIST: `/api/invites`,
+    CREATE: `/api/invites`,
+    VALIDATE: `/api/invites/validate`,
+    ACCEPT: `/api/invites/accept`,
   }
 }
 

@@ -7,6 +7,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { email, password } = body
 
+    console.log('Login attempt for:', email)
+
     if (!email || !password) {
       return NextResponse.json({
         success: false,
@@ -16,13 +18,13 @@ export async function POST(req: NextRequest) {
 
     // Buscar usuário
     const user = await db.user.findUnique({
-      where: { email }
+      where: { email: email.toLowerCase() }
     })
 
     if (!user) {
       return NextResponse.json({
         success: false,
-        message: 'Credenciais inválidas'
+        message: 'Email ou senha incorretos'
       }, { status: 401 })
     }
 
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
     if (!isValidPassword) {
       return NextResponse.json({
         success: false,
-        message: 'Credenciais inválidas'
+        message: 'Email ou senha incorretos'
       }, { status: 401 })
     }
 
@@ -45,13 +47,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Login realizado com sucesso',
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        createdAt: user.createdAt
+      data: {
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          createdAt: user.createdAt
+        }
       }
     })
 
